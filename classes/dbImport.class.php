@@ -1,11 +1,15 @@
 <?php
 abstract class dbImport extends commonClass {
+    protected $provider_id; //Ид. поставщика
+    protected $product_type; //Тип продукта 0 - шины, 1 - диски
     protected $items = array();
     abstract function getFromSource();
+    abstract function storeToDB();
 }
 
 
 class dbImport4tochki extends dbImport {
+    protected $provider_id = 1;
     protected $source_url = "http://api-b2b.pwrs.ru/WCF/ClientService.svc?wsdl";
     protected $source_login = 'sa21354';
     protected $source_password = '1ws7s%X(%F';
@@ -21,7 +25,7 @@ class dbImport4tochki extends dbImport {
         $method_rest = $this->method . "PriceRest";
         
         $total_page_count = $this->sendRequestToSource(0)->$method_result->totalPages;
-        $total_page_count = 1;
+        //$total_page_count = 1;
         //print $total_page_count;
         //die();
         
@@ -37,6 +41,14 @@ class dbImport4tochki extends dbImport {
                 }
         }
         printArray($this->items);
+    }
+    
+    
+    public function storeToDB() {
+        global $db;
+        
+        //$db->query("INSERT INTO imp_import (provider_id, `datetime`, ``)");
+        
     }
     
     
@@ -64,11 +76,12 @@ class dbImport4tochki extends dbImport {
         (
           'login' => 'sa21354',
           'password' => '1ws7s%X(%F',
-          'code_list' => array("796285"),
+          'code_list' => array("WHS029554"),
         );
 
         $answer = $client->GetGoodsInfo($params);  
-        $list = $answer->GetGoodsInfoResult->tyreList->TyreContainer;
+        //$list = $answer->GetGoodsInfoResult->tyreList->TyreContainer;
+        $list = $answer->GetGoodsInfoResult->rimList->RimContainer;
         printArray($list);
         unset($client);
         
@@ -79,6 +92,7 @@ class dbImport4tochki extends dbImport {
 
 
 class dbImport4tochkiTyre extends dbImport4tochki {
+    protected $product_type = 0;
     protected $method = "Tyre";
     
     protected function convert($item) {
@@ -88,6 +102,7 @@ class dbImport4tochkiTyre extends dbImport4tochki {
 
 
 class dbImport4tochkiDisc extends dbImport4tochki {
+    protected $product_type = 1;
     protected $method = "Disk";
     
     protected function convert($item) {

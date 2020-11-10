@@ -12,9 +12,9 @@
     include("classes/dbImport.class.php");
 	
     $conf = new config("includes/config.inc.php");
-    $db = new db();
-    $fortochki = new dbImport4tochkiTyre();
-    //$fortochki = new dbImport4tochkiDisc();
+    //$db = new db();
+    //$fortochki = new dbImport4tochkiTyre();
+    $fortochki = new dbImport4tochkiDisc();
     $fortochki->getFromSource();
 
     unset($conf);

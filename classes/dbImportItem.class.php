@@ -8,8 +8,9 @@ class dbImportItem { //Элемент (товар), полученный при 
     public $price;
     public $price_opt;
     public $count;
-    public $params = array();
     public $img;
+    public $params = array();
+    
     
     protected function roundPrice($value) {
         $base = 5;
@@ -25,26 +26,17 @@ class dbImportItem { //Элемент (товар), полученный при 
 }
 
 
-class dbImportItem4tochkiTyre extends dbImportItem {
-    protected $min_count = 4;
-    protected $price_coef = 1.1;
-    
+class dbImportItem4tochki extends dbImportItem {
     function __construct(stdClass $item) {
         $this->id = $item->code;
         $this->marka = $item->marka;
         $this->model = $item->model;
         $this->img = $item->img_big_my;
-        
-        $this->size = $item->name;
+        $this->size = str_replace(",", ".", $item->name);
         $this->size = str_replace(" " . $item->model, "", $this->size);
-        $this->size = str_replace("(шип.)", "шип", $this->size);
-        $this->getParams(); //Получаем параметры
-        $this->params["thorn"] = (int) $item->thorn;
-        $this->params["season"] = $item->season;
         
-        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
         $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
-    }  
+    }
     
     
     protected function getPriceCount($stores) {
@@ -77,13 +69,31 @@ class dbImportItem4tochkiTyre extends dbImportItem {
         } else {//одно ценовое предложение
             $this->price_opt = $stores->price;
             $this->count = ($stores->rest >= $this->min_count) ? $stores->rest : 0;
-            $this->params["store_id"] = $stores->wrh;
+            if ($this->count > 0)
+                $this->params["store_id"] = $stores->wrh;
         }
         
         $this->price = $this->roundPrice($this->price_coef * $this->price_opt);    
     }
+}
+
+
+class dbImportItem4tochkiTyre extends dbImportItem4tochki {
+    protected $min_count = 4;
+    protected $price_coef = 1.1;
     
+    function __construct(stdClass $item) {
+        parent::__construct($item);
+        
+        $this->size = str_replace("(шип.)", "шип", $this->size);
+        $this->getParams(); //Получаем параметры
+        $this->params["thorn"] = (int) $item->thorn;
+        $this->params["season"] = $item->season;
+        
+        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
+    }  
     
+
     protected function getParams() {
         //ставим пробел перед радиусом R17
         $pos_R = -1;
@@ -108,24 +118,32 @@ class dbImportItem4tochkiTyre extends dbImportItem {
 }
 
 
-class dbImportItem4tochkiDisc extends dbImportItem {
+class dbImportItem4tochkiDisc extends dbImportItem4tochki {
+    protected $min_count = 4;
+    protected $price_coef = 1.1;
+    
     function __construct(stdClass $item) {
-        printArray($item);
-        $this->id = $item->code;
-        $this->marka = $item->marka;
-        $this->model = $item->model;
-        $this->img = $item->img_big_my;
-        /*
-        $this->size = $item->name;
-        $this->size = str_replace(" " . $item->model, "", $this->size);
-        $this->size = str_replace("(шип.)", "шип", $this->size);
-        $this->getParams(); //Получаем параметры
-        $this->params["thorn"] = (int) $item->thorn;
-        $this->params["season"] = $item->season;
+        parent::__construct($item);
         
-        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
-        $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
-        */
+        $this->size = str_replace("х", "x", $this->size);
+        $this->getParams(); //Получаем параметры
+        $this->params["color"] = $item->color;
+        $this->params["type"] = $item->type; //0 => "Литой", 1 => "Штампованный", 2 => "Кованный")
+    }
+    
+    
+    protected function getParams() {
+        $prms = explode(" ", $this->size);
+        $sizes = explode("/", $prms[0]);
+        //printArray($sizes);
+        $this->params["width"] = substr($sizes[0], 0, strpos($sizes[0], "x"));
+        $this->params["diameter"] = substr($sizes[0], strpos($sizes[0], "x") + 1);
+        $this->params["bolts_count"] = substr($sizes[1], 0, strpos($sizes[1], "x"));
+        $this->params["bolts_spacing"] = substr($sizes[1], strpos($sizes[1], "x") + 1);
+        $this->params["et"] = substr($prms[1], strpos($prms[1], "ET") + 2);
+        $this->params["dia"] = substr($prms[2], 1);
+        if ($a = strpos($this->size, "("))
+            $this->params["mount"] = substr($this->size, $a + 1, -1);
     }
 }
 ?>

@@ -106,4 +106,26 @@ class dbImportItem4tochkiTyre extends dbImportItem {
         }    
     }
 }
+
+
+class dbImportItem4tochkiDisc extends dbImportItem {
+    function __construct(stdClass $item) {
+        printArray($item);
+        $this->id = $item->code;
+        $this->marka = $item->marka;
+        $this->model = $item->model;
+        $this->img = $item->img_big_my;
+        /*
+        $this->size = $item->name;
+        $this->size = str_replace(" " . $item->model, "", $this->size);
+        $this->size = str_replace("(шип.)", "шип", $this->size);
+        $this->getParams(); //Получаем параметры
+        $this->params["thorn"] = (int) $item->thorn;
+        $this->params["season"] = $item->season;
+        
+        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
+        $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
+        */
+    }
+}
 ?>

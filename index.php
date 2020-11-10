@@ -13,7 +13,8 @@
 	
     $conf = new config("includes/config.inc.php");
     $db = new db();
-    $fortochki = new dbImport4tochki();
+    $fortochki = new dbImport4tochkiTyre();
+    //$fortochki = new dbImport4tochkiDisc();
     $fortochki->getFromSource();
 
     unset($conf);

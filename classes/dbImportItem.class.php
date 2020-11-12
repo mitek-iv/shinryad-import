@@ -1,5 +1,6 @@
 <?php
 class dbImportItem { //Элемент (товар), полученный при конвертации данных из источника (выгрузки поставщика)
+    protected $product_type; //Тип продукта 1 - шины, 2 - диски
     public $id;
     public $marka;
     public $model;
@@ -11,6 +12,22 @@ class dbImportItem { //Элемент (товар), полученный при 
     public $img;
     public $params = array();
     
+    
+    public function queryString(int $provider_id) {
+        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s')",
+                        $provider_id,
+                        $this->product_type,
+                        $this->id,
+                        htmlspecialchars($this->marka, ENT_QUOTES),
+                        htmlspecialchars($this->model, ENT_QUOTES),
+                        htmlspecialchars($this->size, ENT_QUOTES),
+                        htmlspecialchars($this->full_title, ENT_QUOTES),
+                        $this->price_opt,
+                        $this->price,
+                        $this->count,
+                        toJSON($this->params)
+                      );
+    }
     
     protected function roundPrice($value) {
         $base = 5;
@@ -79,6 +96,7 @@ class dbImportItem4tochki extends dbImportItem {
 
 
 class dbImportItem4tochkiTyre extends dbImportItem4tochki {
+    protected $product_type = 1;
     protected $min_count = 4;
     protected $price_coef = 1.1;
     
@@ -119,6 +137,7 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
 
 
 class dbImportItem4tochkiDisc extends dbImportItem4tochki {
+    protected $product_type = 2;
     protected $min_count = 4;
     protected $price_coef = 1.1;
     
@@ -129,6 +148,7 @@ class dbImportItem4tochkiDisc extends dbImportItem4tochki {
         $this->getParams(); //Получаем параметры
         $this->params["color"] = $item->color;
         $this->params["type"] = $item->type; //0 => "Литой", 1 => "Штампованный", 2 => "Кованный")
+        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
     }
     
     

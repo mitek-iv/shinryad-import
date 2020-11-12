@@ -1,7 +1,7 @@
 <?php
 abstract class dbImport extends commonClass {
     protected $provider_id; //Ид. поставщика
-    protected $product_type; //Тип продукта 0 - шины, 1 - диски
+    protected $product_type;
     protected $items = array();
     abstract function getFromSource();
     abstract function storeToDB();
@@ -40,15 +40,29 @@ class dbImport4tochki extends dbImport {
                     $this->items[] = $this->convert($item);
                 }
         }
-        printArray($this->items);
+        //printArray($this->items);
     }
     
     
     public function storeToDB() {
         global $db;
         
-        //$db->query("INSERT INTO imp_import (provider_id, `datetime`, ``)");
+        $db->query(sprintf("DELETE FROM imp_product_full WHERE provider_id = '%d' AND type_id = '%d'", $this->provider_id, $this->product_type));
         
+        if (!empty($this->items)) {
+            $insert_queries = [];
+            foreach($this->items as $item)
+                if ($item->count > 0)
+                    $insert_queries[] = $item->queryString($this->provider_id);
+            
+            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`) VALUES " 
+                . implode(",", $insert_queries);
+        }
+        
+        //print $insert_query;
+        //die();
+        
+        $db->query($insert_query);
     }
     
     
@@ -92,7 +106,7 @@ class dbImport4tochki extends dbImport {
 
 
 class dbImport4tochkiTyre extends dbImport4tochki {
-    protected $product_type = 0;
+    protected $product_type = 1;
     protected $method = "Tyre";
     
     protected function convert($item) {
@@ -102,7 +116,7 @@ class dbImport4tochkiTyre extends dbImport4tochki {
 
 
 class dbImport4tochkiDisc extends dbImport4tochki {
-    protected $product_type = 1;
+    protected $product_type = 2;
     protected $method = "Disk";
     
     protected function convert($item) {

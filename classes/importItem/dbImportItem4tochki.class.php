@@ -1,48 +1,4 @@
 <?php
-class dbImportItem { //Элемент (товар), полученный при конвертации данных из источника (выгрузки поставщика)
-    protected $product_type; //Тип продукта 1 - шины, 2 - диски
-    public $id;
-    public $marka;
-    public $model;
-    public $size; //типоразмер
-    public $full_title;
-    public $price;
-    public $price_opt;
-    public $count;
-    public $img;
-    public $params = array();
-    
-    
-    public function queryString(int $provider_id) {
-        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s')",
-                        $provider_id,
-                        $this->product_type,
-                        $this->id,
-                        htmlspecialchars($this->marka, ENT_QUOTES),
-                        htmlspecialchars($this->model, ENT_QUOTES),
-                        htmlspecialchars($this->size, ENT_QUOTES),
-                        htmlspecialchars($this->full_title, ENT_QUOTES),
-                        $this->price_opt,
-                        $this->price,
-                        $this->count,
-                        toJSON($this->params)
-                      );
-    }
-    
-    protected function roundPrice($value) {
-        $base = 5;
-        $ost = $value%$base; //вычисляем остаток от деления
-        $chast = floor($value/$base); //находим количество целых округлителей в аргументе
-        
-        $res = $chast * $base;
-        
-        if ($res >= $value) $res -= $base;
-        
-        return $res;
-    }
-}
-
-
 class dbImportItem4tochki extends dbImportItem {
     function __construct(stdClass $item) {
         $this->id = $item->code;
@@ -108,7 +64,7 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
         $this->params["thorn"] = (int) $item->thorn;
         $this->params["season"] = $item->season;
         
-        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
+        $this->getFullTitle();
     }  
     
 
@@ -129,8 +85,8 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
             $this->params["radius"] = substr($prms[1], $pos[0][1]);
         }
         if (preg_match('/[a-zA-Z]/', $prms[2], $pos, PREG_OFFSET_CAPTURE) > 0) {
-            $this->params["loading"] = substr($prms[2], 0, $pos[0][1]);
-            $this->params["speed_index"] = substr($prms[2], $pos[0][1]);
+            $this->params["index_loading"] = substr($prms[2], 0, $pos[0][1]);
+            $this->params["index_speed"] = substr($prms[2], $pos[0][1]);
         }    
     }
 }
@@ -148,7 +104,7 @@ class dbImportItem4tochkiDisc extends dbImportItem4tochki {
         $this->getParams(); //Получаем параметры
         $this->params["color"] = $item->color;
         $this->params["type"] = $item->type; //0 => "Литой", 1 => "Штампованный", 2 => "Кованный")
-        $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
+        $this->getFullTitle();
     }
     
     
@@ -161,7 +117,7 @@ class dbImportItem4tochkiDisc extends dbImportItem4tochki {
         $this->params["bolts_count"] = substr($sizes[1], 0, strpos($sizes[1], "x"));
         $this->params["bolts_spacing"] = substr($sizes[1], strpos($sizes[1], "x") + 1);
         $this->params["et"] = substr($prms[1], strpos($prms[1], "ET") + 2);
-        $this->params["dia"] = substr($prms[2], 1);
+        $this->params["dia"] = substr($prms[2], 1); //CB67.1 проверить корректность
         if ($a = strpos($this->size, "("))
             $this->params["mount"] = substr($this->size, $a + 1, -1);
     }

@@ -9,6 +9,7 @@ class dbImport4tochki extends dbImport {
     protected $method = null; //Название метода для получения данных через API. Перекрывается в потомках
     
     public function getFromSource() {
+        parent::getFromSource();
         $cur_page = 0;
         
         //в зависимости от класса (диски или шины) динамически формируем методы, которые будут вызываться в API
@@ -23,37 +24,13 @@ class dbImport4tochki extends dbImport {
         //$this->get_full_product_inform(0);
         //die();
         for ($cur_page = 0; $cur_page <= $total_page_count - 1; $cur_page++) {
-            
             $list = $this->sendRequestToSource($cur_page)->$method_result->price_rest_list->$method_rest;
-            
-            if (!empty($list))
-                foreach ($list as $item) {
-                    $this->items[] = $this->convert($item);
-                }
+            $this->convertToItems($list);
         }
+        
+        $this->toLog("Итого получено: " . count($this->items));
+        //printArray($list);
         //printArray($this->items);
-    }
-    
-    
-    public function storeToDB() {
-        global $db;
-        
-        $db->query(sprintf("DELETE FROM imp_product_full WHERE provider_id = '%d' AND type_id = '%d'", $this->provider_id, $this->product_type));
-        
-        if (!empty($this->items)) {
-            $insert_queries = [];
-            foreach($this->items as $item)
-                if ($item->count > 0)
-                    $insert_queries[] = $item->queryString($this->provider_id);
-            
-            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`) VALUES " 
-                . implode(",", $insert_queries);
-        }
-        
-        //print $insert_query;
-        //die();
-        
-        $db->query($insert_query);
     }
     
     
@@ -78,20 +55,14 @@ class dbImport4tochki extends dbImport {
 
 class dbImport4tochkiTyre extends dbImport4tochki {
     protected $product_type = 1;
+    protected $item_class = "dbImportItem4tochkiTyre";
     protected $method = "Tyre";
-    
-    protected function convert($item) {
-        return new dbImportItem4tochkiTyre($item);
-    }
 }
 
 
 class dbImport4tochkiDisc extends dbImport4tochki {
     protected $product_type = 2;
+    protected $item_class = "dbImportItem4tochkiDisc";
     protected $method = "Disk";
-    
-    protected function convert($item) {
-        return new dbImportItem4tochkiDisc($item);
-    }
 }
 ?>

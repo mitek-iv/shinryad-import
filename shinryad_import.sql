@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1:3306
--- Время создания: Ноя 12 2020 г., 09:58
--- Версия сервера: 5.7.25
+-- Время создания: Ноя 16 2020 г., 09:48
+-- Версия сервера: 10.3.13-MariaDB
 -- Версия PHP: 7.2.10
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -19,7 +19,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- База данных: `shinryad-import`
+-- База данных: `shinryad_product_import`
 --
 
 -- --------------------------------------------------------
@@ -31,16 +31,16 @@ SET time_zone = "+00:00";
 CREATE TABLE `imp_product_full` (
   `id` bigint(11) NOT NULL,
   `provider_id` int(11) NOT NULL COMMENT 'Ид. поставщика',
-  `type_id` int(11) NOT NULL DEFAULT '0' COMMENT 'Тип продукта',
+  `type_id` int(11) NOT NULL DEFAULT 0 COMMENT 'Тип продукта',
   `code` varchar(30) NOT NULL COMMENT 'Идентификатор позиции (внутри выгрузки поставщика)',
   `marka` varchar(100) NOT NULL COMMENT 'Марка',
   `model` varchar(100) NOT NULL COMMENT 'Модель',
   `size` varchar(255) DEFAULT NULL COMMENT 'Типоразмер',
   `full_title` varchar(255) NOT NULL COMMENT 'Полное наименование',
-  `price_opt` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Оптовая цена',
-  `price` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Розничная цена',
-  `count` int(11) NOT NULL DEFAULT '0' COMMENT 'Количество',
-  `params` text COMMENT 'Параметры'
+  `price_opt` decimal(10,0) NOT NULL DEFAULT 0 COMMENT 'Оптовая цена',
+  `price` decimal(10,0) NOT NULL DEFAULT 0 COMMENT 'Розничная цена',
+  `count` int(11) NOT NULL DEFAULT 0 COMMENT 'Количество',
+  `params` text DEFAULT NULL COMMENT 'Параметры'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

@@ -16,8 +16,10 @@ class dbImport extends commonClass {
     Сохранение данных из $items в БД
     */
     public function storeToDB() {
+        
         $this->toLog("Запись данных в БД");
-        global $db;
+        global $conf;
+        $db = new db();
         
         $db->query(sprintf("DELETE FROM imp_product_full WHERE provider_id = '%d' AND type_id = '%d'", $this->provider_id, $this->product_type));
         
@@ -30,7 +32,7 @@ class dbImport extends commonClass {
                     $total_insert_count++;
                 }
             
-            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`) VALUES " 
+            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`, `provider_title`) VALUES " 
                 . implode(",", $insert_queries);
         }
         
@@ -39,6 +41,8 @@ class dbImport extends commonClass {
         
         $db->query($insert_query);
         $this->toLog("Итого записано в БД: " . $total_insert_count);
+        
+        unset($db);
     }
     
     

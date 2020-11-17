@@ -18,26 +18,43 @@
     include("classes/import/dbImportKolesaDarom.class.php");
 	
     $conf = new config("includes/config.inc.php");
-    $db = new db();
     
-    toLog("---Запуск обработки---", true);
+    if (!isset($_REQUEST["step"]))
+        $step = 0;
+    else $step = (int) $_REQUEST["step"];
+
+    if ($step == 0)
+        toLog("---Запуск обработки---", true);
+    else
+        toLog("Шаг $step");
+
     $classes_to_process = [
-//        "dbImport4tochkiTyre", 
-//        "dbImport4tochkiDisc", 
-//        "dbImportKolesaDaromTyre",
+        "dbImport4tochkiTyre", 
+        "dbImport4tochkiDisc", 
+        "dbImportKolesaDaromTyre",
         "dbImportKolesaDaromDisc",
     ];
-    foreach($classes_to_process as $class) {
-        $import = new $class();
-        $import->getFromSource();
-        //$import->storeToDB();
-        unset($import);
-    }
+    
+    $class = $classes_to_process[$step];
+    //foreach($classes_to_process as $class) {
+    $import = new $class();
+    $import->getFromSource();
+    $import->storeToDB();
+    unset($import);
+    //}
 
     unset($conf);
-	unset($db);
 
-    $time = microtime(true) - $start;
-    $time = number_format($time, 2, ".", "");
-    toLog("Время выполнения запроса: $time сек.");
+    $step++;
+
+    if ($step >= count($classes_to_process)) {
+        toLog("---Конец обработки---", true);    
+    } else {
+        $time = microtime(true) - $start;
+        $time = number_format($time, 2, ".", "");
+        toLog("Время выполнения шага: $time сек.");
+        $hr = $_SERVER["PHP_SELF"];
+        header("location: $hr?step=$step");
+        exit;
+    }
 ?>

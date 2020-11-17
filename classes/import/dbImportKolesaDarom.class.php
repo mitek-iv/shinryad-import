@@ -50,7 +50,7 @@ class dbImport4KolesaDarom extends dbImport {
         $fields = $csv_array[1];
         $this->products = [];
 
-        for ($i = 2; $i <= 49; $i++) {  //count($csv_array) - 1
+        for ($i = 2; $i <= count($csv_array) - 1; $i++) {  //
             $item = $csv_array[$i];
             //printArray($item);
             $product = array();

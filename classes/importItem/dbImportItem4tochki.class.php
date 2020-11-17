@@ -9,6 +9,8 @@ class dbImportItem4tochki extends dbImportItem {
         $this->size = str_replace(" " . $item->model, "", $this->size);
         
         $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
+        
+        $this->provider_title = $item->marka . " " . $item->name;
     }
     
     

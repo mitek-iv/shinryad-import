@@ -12,9 +12,11 @@ class dbImportItem { //Элемент (товар), полученный при 
     public $img;
     public $params = array();
     
+    public $provider_title; //исходное название, которое фигурирует в выгрузке
+    
     
     public function queryString(int $provider_id) {
-        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s')",
+        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s')",
                         $provider_id,
                         $this->product_type,
                         $this->id,
@@ -25,7 +27,8 @@ class dbImportItem { //Элемент (товар), полученный при 
                         $this->price_opt,
                         $this->price,
                         $this->count,
-                        toJSON($this->params)
+                        toJSON($this->params),
+                        htmlspecialchars($this->provider_title, ENT_QUOTES)
                       );
     }
     

@@ -16,16 +16,20 @@ class dbImport4tochki extends dbImport {
         $method_result = "GetFind" . $this->method . "Result";
         $method_rest = $this->method . "PriceRest";
         
-        $total_page_count = $this->sendRequestToSource(0)->$method_result->totalPages;
-        //$total_page_count = 1;
-        //print $total_page_count;
-        //die();
-        
-        //$this->get_full_product_inform(0);
-        //die();
-        for ($cur_page = 0; $cur_page <= $total_page_count - 1; $cur_page++) {
-            $list = $this->sendRequestToSource($cur_page)->$method_result->price_rest_list->$method_rest;
-            $this->convertToItems($list);
+        try {
+            $total_page_count = $this->sendRequestToSource(0)->$method_result->totalPages;
+            //$total_page_count = 1;
+            //print $total_page_count;
+            //die();
+
+            //$this->get_full_product_inform(0);
+            //die();
+            for ($cur_page = 0; $cur_page <= $total_page_count - 1; $cur_page++) {
+                $list = $this->sendRequestToSource($cur_page)->$method_result->price_rest_list->$method_rest;
+                $this->convertToItems($list);
+            }
+        } catch (Exception $e) {
+            $this->toLog($e->getMessage());
         }
         
         $this->toLog("Итого получено: " . count($this->items));

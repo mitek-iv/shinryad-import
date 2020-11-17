@@ -50,7 +50,7 @@ class dbImport4KolesaDarom extends dbImport {
         $fields = $csv_array[1];
         $this->products = [];
 
-        for ($i = 2; $i <= count($csv_array) - 1; $i++) {  
+        for ($i = 2; $i <= 49; $i++) {  //count($csv_array) - 1
             $item = $csv_array[$i];
             //printArray($item);
             $product = array();
@@ -158,5 +158,6 @@ class dbImportKolesaDaromTyre extends dbImport4KolesaDarom {
 
 class dbImportKolesaDaromDisc extends dbImport4KolesaDarom {
     protected $product_type = 2;
+    protected $item_class = "dbImportItemKolesaDaromDisc";
 }
 ?>

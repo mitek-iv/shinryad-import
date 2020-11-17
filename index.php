@@ -20,24 +20,24 @@
     $conf = new config("includes/config.inc.php");
     $db = new db();
     
-    
-    $classes_to_process = ["dbImport4tochkiTyre", "dbImport4tochkiDisc", "dbImportKolesaDaromTyre"];
+    toLog("---Запуск обработки---", true);
+    $classes_to_process = [
+//        "dbImport4tochkiTyre", 
+//        "dbImport4tochkiDisc", 
+//        "dbImportKolesaDaromTyre",
+        "dbImportKolesaDaromDisc",
+    ];
     foreach($classes_to_process as $class) {
         $import = new $class();
         $import->getFromSource();
-        $import->storeToDB();
+        //$import->storeToDB();
+        unset($import);
     }
-    
-    //$import = new dbImport4tochkiTyre();
-    //$import = new dbImport4tochkiDisc();
-    //$import = new dbImportKolesaDaromTyre();
-    //$import = new dbImportKolesaDaromDisc();
-    
 
     unset($conf);
 	unset($db);
 
     $time = microtime(true) - $start;
     $time = number_format($time, 2, ".", "");
-    print "Время выполнения запроса: $time сек.";
+    toLog("Время выполнения запроса: $time сек.");
 ?>

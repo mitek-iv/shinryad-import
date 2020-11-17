@@ -54,4 +54,38 @@ class dbImportItemKolesaDaromTyre extends dbImportItemKolesaDarom {
         $this->params["season"] = $seasons[$item["seasonality"]];
     }
 }
+
+
+class dbImportItemKolesaDaromDisc extends dbImportItemKolesaDarom {
+    protected $product_type = 2;
+    protected $min_count = 4;
+    protected $price_coef = 1.1;
+    
+    
+    protected function convertToSize(array $item) {
+        $name = $item["name"];
+        $name = str_replace($item["maker"], "", $name);
+        $name = str_replace($item["categoryname"], "", $name);
+        $name_part = explode(" ", trim($name));
+        $r = $name_part[0];
+        $name_part[0] = $name_part[1];
+        $name_part[1] = $r;
+        //printArray($name_part);
+        $this->size = implode(" ", $name_part);
+    }
+    
+    
+    protected function getParams(array $item) {
+        /*
+        $this->params["width"] = $item["shirina_secheniya"];
+        $this->params["height"] = $item["visota_secheniya"];
+        $this->params["radius"] = $item["radius"];
+        $this->params["index_loading"] = $item["index_loading"];
+        $this->params["index_speed"] = $item["index_speed"];
+        $this->params["thorn"] = ($item["ship"] == "Шипованные") ? 1 : 0;
+        $seasons = ["Лето" => "s", "Зима" => "w", "Всесезонные" => "u"];
+        $this->params["season"] = $seasons[$item["seasonality"]];
+        */
+    }
+}
 ?>

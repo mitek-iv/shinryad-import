@@ -24,7 +24,7 @@
     else $step = (int) $_REQUEST["step"];
 
     if ($step == 0)
-        toLog("---Запуск обработки---", true);
+        toLog("\r\n---Запуск обработки---", true);
     else
         toLog("Шаг $step");
 
@@ -35,26 +35,34 @@
         "dbImportKolesaDaromDisc",
     ];
     
-    $class = $classes_to_process[$step];
-    //foreach($classes_to_process as $class) {
-    $import = new $class();
-    $import->getFromSource();
-    $import->storeToDB();
-    unset($import);
-    //}
+    if (isset($classes_to_process[$step])) {
+        $class = $classes_to_process[$step];
+        //foreach($classes_to_process as $class) {
+        $import = new $class();
+        $import->getFromSource();
+        $import->storeToDB();
+        unset($import);
+    } elseif ($step == count($classes_to_process)) {
+        dbImport::compactProductList();
+    }
+
+    
+    $time = microtime(true) - $start;
+    $time = number_format($time, 2, ".", "");
+    toLog("Время выполнения шага: $time сек.");
 
     unset($conf);
 
     $step++;
-
-    if ($step >= count($classes_to_process)) {
+    
+    if ($step > count($classes_to_process)) {
         toLog("---Конец обработки---", true);    
     } else {
-        $time = microtime(true) - $start;
-        $time = number_format($time, 2, ".", "");
-        toLog("Время выполнения шага: $time сек.");
         $hr = $_SERVER["PHP_SELF"];
         header("location: $hr?step=$step");
         exit;
     }
+//4tochki шины
+//129451
+//631595
 ?>

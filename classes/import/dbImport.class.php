@@ -45,6 +45,40 @@ class dbImport extends commonClass {
         unset($db);
     }
     
+    /**
+    Избавляется от дублирующихся предложений, оставляя предложения с наименьшей ценой
+    
+    Во внутреннем запросе происходит группировка по позициям с определением минимальной цены
+    Во внешнем запросе избавляемся от дублирующих строчек с одинаковой минимальной ценой
+    Потом результат сохраняем в таблицу imp_product_compact - уникальные товарные предложения
+    */
+    public static function compactProductList() {
+        toLog("Сжимаем список товарных предложений");
+        global $conf;
+        $db = new db();
+        $db->query("TRUNCATE TABLE imp_product_compact");
+        $db->query("
+            INSERT INTO imp_product_compact
+            SELECT * FROM imp_product_full WHERE id IN (
+                SELECT MAX(id) as id
+                FROM (
+                    SELECT P1.id, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`
+                    FROM imp_product_full P1
+                    INNER JOIN (
+                        SELECT `type_id`, `marka`, `model`, `size`, MIN(price) as min_price, COUNT(*) as cnt
+                        FROM `imp_product_full`
+                        WHERE 1
+                        GROUP BY `type_id`, `marka`, `model`, `size`
+                    ) P2
+                    ON (P1.`type_id` = P2.`type_id`) AND (P1.`marka` = P2.`marka`) AND (P1.`model` = P2.`model`) AND (P1.`size` = P2.`size`) AND (P1.`price` = P2.`min_price`)
+                ) P3
+                WHERE 1
+                GROUP BY  `type_id`, `marka`, `model`, `size`, `price`
+            )
+        ");
+        
+        unset($db);
+    }
     
     /**
     Преобразование массива или stdCalss в объект класса, предназначенного для дальнейшей обработки

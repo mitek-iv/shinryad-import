@@ -104,6 +104,8 @@ class dbImportItem4tochkiDisc extends dbImportItem4tochki {
         
         $this->size = str_replace("х", "x", $this->size);
         $this->getParams(); //Получаем параметры
+        
+        $this->size = str_replace("/", " ", $this->size);
         $this->params["color"] = $item->color;
         $this->params["type"] = $item->type; //0 => "Литой", 1 => "Штампованный", 2 => "Кованный")
         $this->getFullTitle();

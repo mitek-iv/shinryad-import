@@ -62,22 +62,37 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
         parent::__construct($item);
         
         $this->size = str_replace("(шип.)", "шип", $this->size);
+        $this->size = str_replace("х", "x", $this->size);
+        $this->size = str_replace("x", "/", $this->size);
         $this->getParams(); //Получаем параметры
         $this->params["thorn"] = (int) $item->thorn;
         $this->params["season"] = $item->season;
         
         $this->getFullTitle();
+        //printArray($item);
+        //printArray($this);
     }  
     
 
     protected function getParams() {
+        $pos_digit = -1;
+        if (preg_match('/[0-9]/', $this->size, $pos, PREG_OFFSET_CAPTURE) > 0) {
+            $pos_digit = $pos[0][1];
+            //print "!!!" . $pos_digit;
+            if ($pos_digit > 0)
+                $this->size = substr($this->size, $pos_digit);
+            
+            //$this->size = $size;
+        }
+        //print "!!!" . $this->size . "<br>";
         //ставим пробел перед радиусом R17
         $pos_R = -1;
         if (preg_match('/[a-zA-Z]/', $this->size, $pos, PREG_OFFSET_CAPTURE) > 0) {
             $pos_R = $pos[0][1];
-            $size = substr($this->size, 0, $pos_R) . " " . substr($this->size, 6);
+            $size = substr($this->size, 0, $pos_R) . " " . substr($this->size, $pos_R);
             $this->size = $size;
         }
+        //print "!!!" . $this->size . "<br>";
         $this->params = array();
         
         $prms = explode(" ", $this->size);

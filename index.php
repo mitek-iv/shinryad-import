@@ -40,6 +40,7 @@
         //foreach($classes_to_process as $class) {
         $import = new $class();
         $import->getFromSource();
+        //die();
         $import->storeToDB();
         unset($import);
     } elseif ($step == count($classes_to_process)) {

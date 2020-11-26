@@ -12,10 +12,12 @@
     include("classes/importItem/dbImportItem.class.php");
     include("classes/importItem/dbImportItem4tochki.class.php");
     include("classes/importItem/dbImportItemKolesaDarom.class.php");
+    include("classes/importItem/dbImportItemShinInvest.class.php");
 
     include("classes/import/dbImport.class.php");
     include("classes/import/dbImport4tochki.class.php");
     include("classes/import/dbImportKolesaDarom.class.php");
+    include("classes/import/dbImportShinInvest.class.php");
 	
     $conf = new config("includes/config.inc.php");
     
@@ -29,18 +31,19 @@
         toLog("Шаг $step");
 
     $classes_to_process = [
-        "dbImport4tochkiTyre", 
-        "dbImport4tochkiDisc", 
-        "dbImportKolesaDaromTyre",
-        "dbImportKolesaDaromDisc",
+        //"dbImport4tochkiTyre", 
+        //"dbImport4tochkiDisc", 
+        //"dbImportKolesaDaromTyre",
+        //"dbImportKolesaDaromDisc",
+        "dbImportShinInvestTyre",
     ];
     
     if (isset($classes_to_process[$step])) {
         $class = $classes_to_process[$step];
-        //foreach($classes_to_process as $class) {
+        
         $import = new $class();
         $import->getFromSource();
-        //die();
+        die();
         $import->storeToDB();
         unset($import);
     } elseif ($step == count($classes_to_process)) {
@@ -63,7 +66,4 @@
         header("location: $hr?step=$step");
         exit;
     }
-//4tochki шины
-//129451
-//631595
 ?>

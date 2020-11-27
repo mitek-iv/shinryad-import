@@ -43,7 +43,7 @@
         
         $import = new $class();
         $import->getFromSource();
-        die();
+        //die();
         $import->storeToDB();
         unset($import);
     } elseif ($step == count($classes_to_process)) {

@@ -35,6 +35,12 @@ class dbImportItemKolesaDaromTyre extends dbImportItemKolesaDarom {
         $name = $item["name"];
         $name = str_replace($item["categoryname"], "", $name);
         $name = str_replace($item["maker"], "", $name);
+        
+        $parts_to_delete = array("XL", "TL", "RBT", "TA", "FR", "SD", "M+S", "шип");
+        foreach($parts_to_delete as $part) {
+            $name = str_replace(" " . $part, "", $name);    
+        }
+        
         $name_part = explode(" ", trim($name));
         $r = $name_part[0];
         $name_part[0] = $name_part[1];

@@ -5,11 +5,8 @@ class dbImportItem4tochki extends dbImportItem {
         $this->marka = $item->marka;
         $this->model = $item->model;
         $this->img = $item->img_big_my;
-        $this->size = str_replace(",", ".", $item->name);
-        $this->size = str_replace(" " . $item->model, "", $this->size);
         
         $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
-        
         $this->provider_title = $item->marka . " " . $item->name;
     }
     
@@ -50,6 +47,13 @@ class dbImportItem4tochki extends dbImportItem {
         
         $this->price = $this->roundPrice($this->price_coef * $this->price_opt);    
     }
+    
+    
+    protected function convertToSize($item) {
+        $this->size = str_replace(",", ".", $item->name);
+        $this->size = str_replace(" " . $item->model, "", $this->size);
+        $this->size = str_replace("х", "x", $this->size);
+    }
 }
 
 
@@ -60,10 +64,8 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
     
     function __construct(stdClass $item) {
         parent::__construct($item);
+        $this->convertToSize($item);
         
-        $this->size = str_replace("(шип.)", "шип", $this->size);
-        $this->size = str_replace("х", "x", $this->size);
-        $this->size = str_replace("x", "/", $this->size);
         $this->getParams(); //Получаем параметры
         $this->params["thorn"] = (int) $item->thorn;
         $this->params["season"] = $item->season;
@@ -106,6 +108,19 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
             $this->params["index_speed"] = substr($prms[2], $pos[0][1]);
         }    
     }
+    
+    
+     protected function convertToSize($item) {
+         parent::convertToSize($item);
+         
+         $parts_to_delete = array("XL", "TL", "RBT", "TA", "FR", "SD", "M+S", "(шип.)");
+         foreach($parts_to_delete as $part) {
+            $this->size = str_replace(" " . $part, "", $this->size);    
+         }
+        
+         $this->size = str_replace("x", "/", $this->size);
+         $this->size = rtrim($this->size);
+     }
 }
 
 
@@ -116,8 +131,8 @@ class dbImportItem4tochkiDisc extends dbImportItem4tochki {
     
     function __construct(stdClass $item) {
         parent::__construct($item);
+        $this->convertToSize($item);
         
-        $this->size = str_replace("х", "x", $this->size);
         $this->getParams(); //Получаем параметры
         
         $this->size = str_replace("/", " ", $this->size);

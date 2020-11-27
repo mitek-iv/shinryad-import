@@ -3,7 +3,12 @@ class dbImportItemShinInvest extends dbImportItem {
     function __construct(array $item) {
         $this->id = $item["code"];
         $this->marka = $item["producer"];
-        $this->model = $item["model"];
+        
+        //Первре слово модели приводим к виду Xxxxxxxx
+        $model = explode(" ", $item["model"]);
+        $model[0] = ucfirst(strtolower($model[0]));
+        $this->model = implode(" ", $model);
+        
         //$this->img = $item->img_big_my;
         
         
@@ -13,8 +18,8 @@ class dbImportItemShinInvest extends dbImportItem {
         $this->getFullTitle();
         
         //$this->provider_title = $item->marka . " " . $item->name;
-        printArray($item);
-        printArray($this);
+        //printArray($item);
+        //printArray($this);
     }
     
     

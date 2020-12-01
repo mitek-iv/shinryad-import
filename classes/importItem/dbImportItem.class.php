@@ -16,6 +16,9 @@ class dbImportItem { //Элемент (товар), полученный при 
     
     
     public function queryString(int $provider_id) {
+        if ($this->count <= 0) return null;
+        if (htmlspecialchars($this->model, ENT_QUOTES) == "") return null;
+            
         return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s')",
                         $provider_id,
                         $this->product_type,
@@ -46,6 +49,29 @@ class dbImportItem { //Элемент (товар), полученный при 
     
     protected function getFullTitle() {
         $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
+    }
+    
+    
+    /**
+    *
+    * Первое слово модели приводим к виду Xxxxxxxx
+    */
+    protected function normalizeModel($marka, $model) {
+        if ($marka == "Continental")
+            return $model;
+        
+        $mdl = explode(" ", $model);
+        if (strpos($mdl[0], "-") !== false) {
+            $mdl_parts = explode("-", $mdl[0]);  
+            foreach($mdl_parts as &$part) {
+                $part = ucfirst(strtolower($part));
+            }
+            $mdl[0] = implode("-", $mdl_parts);
+        } else {
+            $mdl[0] = ucfirst(strtolower($mdl[0]));
+        }
+        
+        return implode(" ", $mdl);
     }
 }
 ?>

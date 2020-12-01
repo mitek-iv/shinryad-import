@@ -3,7 +3,7 @@ class dbImportItem4tochki extends dbImportItem {
     function __construct(stdClass $item) {
         $this->id = $item->code;
         $this->marka = $item->marka;
-        $this->model = $item->model;
+        $this->model = $this->normalizeModel($this->marka, $item->model);
         $this->img = $item->img_big_my;
         
         $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества

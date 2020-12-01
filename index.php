@@ -31,9 +31,9 @@
         toLog("Шаг $step");
 
     $classes_to_process = [
-        //"dbImport4tochkiTyre", 
+        "dbImport4tochkiTyre", 
         //"dbImport4tochkiDisc", 
-        //"dbImportKolesaDaromTyre",
+        "dbImportKolesaDaromTyre",
         //"dbImportKolesaDaromDisc",
         "dbImportShinInvestTyre",
     ];
@@ -63,6 +63,7 @@
         toLog("---Конец обработки---", true);    
     } else {
         $hr = $_SERVER["PHP_SELF"];
+        toLog("location: $hr?step=$step");
         header("location: $hr?step=$step");
         exit;
     }

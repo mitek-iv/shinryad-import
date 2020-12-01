@@ -26,20 +26,23 @@ class dbImport extends commonClass {
         $total_insert_count = 0;
         if (!empty($this->items)) {
             $insert_queries = [];
-            foreach($this->items as $item)
-                if ($item->count > 0) {
-                    $insert_queries[] = $item->queryString($this->provider_id);
+            foreach($this->items as $item) {
+                $queryString = $item->queryString($this->provider_id);
+                if (!empty($queryString)) {
+                    $insert_queries[] = $queryString; //$item->queryString($this->provider_id);
                     $total_insert_count++;
                 }
-            
-            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`, `provider_title`) VALUES " 
-                . implode(",", $insert_queries);
+            }
         }
         
         //print $insert_query;
         //die();
-        
-        $db->query($insert_query);
+        if (count($insert_queries) > 0) {
+            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`, `provider_title`) VALUES " 
+                . implode(",", $insert_queries);
+            
+            $db->query($insert_query);
+        }
         $this->toLog("Итого записано в БД: " . $total_insert_count);
         
         unset($db);

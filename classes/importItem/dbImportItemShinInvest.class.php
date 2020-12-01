@@ -3,15 +3,9 @@ class dbImportItemShinInvest extends dbImportItem {
     function __construct(array $item) {
         $this->id = $item["code"];
         $this->marka = $item["producer"];
-        
-        //Первре слово модели приводим к виду Xxxxxxxx
-        $model = explode(" ", $item["model"]);
-        $model[0] = ucfirst(strtolower($model[0]));
-        $this->model = implode(" ", $model);
+        $this->model = $this->normalizeModel($this->marka, $item["model"]);
         
         //$this->img = $item->img_big_my;
-        
-        
         $this->getPriceCount($item); //Обработка цены и количества
         $this->getParams($item);
         $this->convertToSize($item);
@@ -61,6 +55,13 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
     
     protected function convertToSize() {
         $this->size = sprintf("%s/%s R%s %s%s", $this->params["width"], $this->params["height"], $this->params["radius"], $this->params["index_loading"], $this->params["index_speed"]);
+    }
+    
+    protected function normalizeModel($marka, $model) {
+        if ($marka == "Nokian") //Nokian H-8 => Nokian Hakkapeliitta 8
+            $model = str_replace("H-", "Hakkapeliitta ", $model);
+        
+        return parent::normalizeModel($marka, $model);
     }
 }
 ?>

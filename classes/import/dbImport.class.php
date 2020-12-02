@@ -38,7 +38,7 @@ class dbImport extends commonClass {
         //print $insert_query;
         //die();
         if (count($insert_queries) > 0) {
-            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`, `provider_title`) VALUES " 
+            $insert_query = "INSERT INTO imp_product_full (`provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `price_opt`, `price`, `count`, `params`, `provider_title`, `img`) VALUES " 
                 . implode(",", $insert_queries);
             
             $db->query($insert_query);
@@ -57,9 +57,9 @@ class dbImport extends commonClass {
     */
     public static function compactProductList() {
         toLog("Сжимаем список товарных предложений");
+        
         global $conf;
         $db = new db();
-        $db->query("TRUNCATE TABLE imp_product_compact");
         $db->query("
             INSERT INTO imp_product_compact
             SELECT * FROM imp_product_full WHERE id IN (
@@ -82,6 +82,21 @@ class dbImport extends commonClass {
         
         unset($db);
     }
+    
+    
+    /**
+    * Чистит таблички
+    */
+    public static function clearTables() {
+        toLog("Очистка таблиц");
+        
+        global $conf;
+        $db = new db();
+        $db->query("TRUNCATE TABLE imp_product_full");
+        $db->query("TRUNCATE TABLE imp_product_compact");
+        unset($db);
+    }
+    
     
     /**
     Преобразование массива или stdCalss в объект класса, предназначенного для дальнейшей обработки

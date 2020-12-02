@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1:3306
--- Время создания: Ноя 16 2020 г., 09:48
--- Версия сервера: 10.3.13-MariaDB
+-- Время создания: Дек 02 2020 г., 09:45
+-- Версия сервера: 5.7.25
 -- Версия PHP: 7.2.10
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -19,8 +19,31 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- База данных: `shinryad_product_import`
+-- База данных: `shinryad-import`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Структура таблицы `imp_product_compact`
+--
+
+CREATE TABLE `imp_product_compact` (
+  `id` bigint(11) NOT NULL,
+  `provider_id` int(11) NOT NULL COMMENT 'Ид. поставщика',
+  `type_id` int(11) NOT NULL DEFAULT '0' COMMENT 'Тип продукта',
+  `code` varchar(30) NOT NULL COMMENT 'Идентификатор позиции (внутри выгрузки поставщика)',
+  `marka` varchar(100) NOT NULL COMMENT 'Марка',
+  `model` varchar(100) NOT NULL COMMENT 'Модель',
+  `size` varchar(255) DEFAULT NULL COMMENT 'Типоразмер',
+  `full_title` varchar(255) NOT NULL COMMENT 'Полное наименование',
+  `provider_title` varchar(255) DEFAULT NULL,
+  `price_opt` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Оптовая цена',
+  `price` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Розничная цена',
+  `count` int(11) NOT NULL DEFAULT '0' COMMENT 'Количество',
+  `params` text COMMENT 'Параметры',
+  `img` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -31,16 +54,18 @@ SET time_zone = "+00:00";
 CREATE TABLE `imp_product_full` (
   `id` bigint(11) NOT NULL,
   `provider_id` int(11) NOT NULL COMMENT 'Ид. поставщика',
-  `type_id` int(11) NOT NULL DEFAULT 0 COMMENT 'Тип продукта',
+  `type_id` int(11) NOT NULL DEFAULT '0' COMMENT 'Тип продукта',
   `code` varchar(30) NOT NULL COMMENT 'Идентификатор позиции (внутри выгрузки поставщика)',
   `marka` varchar(100) NOT NULL COMMENT 'Марка',
   `model` varchar(100) NOT NULL COMMENT 'Модель',
   `size` varchar(255) DEFAULT NULL COMMENT 'Типоразмер',
   `full_title` varchar(255) NOT NULL COMMENT 'Полное наименование',
-  `price_opt` decimal(10,0) NOT NULL DEFAULT 0 COMMENT 'Оптовая цена',
-  `price` decimal(10,0) NOT NULL DEFAULT 0 COMMENT 'Розничная цена',
-  `count` int(11) NOT NULL DEFAULT 0 COMMENT 'Количество',
-  `params` text DEFAULT NULL COMMENT 'Параметры'
+  `provider_title` varchar(255) DEFAULT NULL,
+  `price_opt` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Оптовая цена',
+  `price` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Розничная цена',
+  `count` int(11) NOT NULL DEFAULT '0' COMMENT 'Количество',
+  `params` text COMMENT 'Параметры',
+  `img` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -79,11 +104,23 @@ CREATE TABLE `imp_provider` (
 
 INSERT INTO `imp_provider` (`id`, `name`) VALUES
 (1, '4tochki'),
-(2, 'KolesaDarom');
+(2, 'KolesaDarom'),
+(3, 'ШинИнвест');
 
 --
 -- Индексы сохранённых таблиц
 --
+
+--
+-- Индексы таблицы `imp_product_compact`
+--
+ALTER TABLE `imp_product_compact`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `provider_id` (`provider_id`),
+  ADD KEY `type_id` (`type_id`) USING BTREE,
+  ADD KEY `size` (`size`),
+  ADD KEY `marka` (`marka`),
+  ADD KEY `model` (`model`);
 
 --
 -- Индексы таблицы `imp_product_full`
@@ -113,6 +150,12 @@ ALTER TABLE `imp_provider`
 --
 
 --
+-- AUTO_INCREMENT для таблицы `imp_product_compact`
+--
+ALTER TABLE `imp_product_compact`
+  MODIFY `id` bigint(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT для таблицы `imp_product_full`
 --
 ALTER TABLE `imp_product_full`
@@ -128,7 +171,7 @@ ALTER TABLE `imp_product_type`
 -- AUTO_INCREMENT для таблицы `imp_provider`
 --
 ALTER TABLE `imp_provider`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Ограничения внешнего ключа сохраненных таблиц

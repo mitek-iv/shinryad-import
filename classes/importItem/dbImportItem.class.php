@@ -19,7 +19,7 @@ class dbImportItem { //Элемент (товар), полученный при 
         if ($this->count <= 0) return null;
         if (htmlspecialchars($this->model, ENT_QUOTES) == "") return null;
             
-        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s')",
+        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s')",
                         $provider_id,
                         $this->product_type,
                         $this->id,
@@ -31,7 +31,8 @@ class dbImportItem { //Элемент (товар), полученный при 
                         $this->price,
                         $this->count,
                         toJSON($this->params),
-                        htmlspecialchars($this->provider_title, ENT_QUOTES)
+                        htmlspecialchars($this->provider_title, ENT_QUOTES),
+                        $this->img
                       );
     }
     

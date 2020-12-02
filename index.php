@@ -25,8 +25,10 @@
         $step = 0;
     else $step = (int) $_REQUEST["step"];
 
-    if ($step == 0)
+    if ($step == 0) {
         toLog("\r\n---Запуск обработки---", true);
+        dbImport::clearTables();
+    }
     else
         toLog("Шаг $step");
 
@@ -40,7 +42,6 @@
     
     if (isset($classes_to_process[$step])) {
         $class = $classes_to_process[$step];
-        
         $import = new $class();
         $import->getFromSource();
         //die();

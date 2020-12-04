@@ -64,4 +64,44 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
         return parent::normalizeModel($marka, $model);
     }
 }
+
+
+class dbImportItemShinInvestDisc extends dbImportItemShinInvest {
+    protected $product_type = 2;
+    protected $min_count = 4;
+    protected $price_coef = 1.1;
+    
+    protected function getParams(array $item) {
+        
+        $this->params["width"] = str_replace(",", ".", $item["width"]);
+        $this->params["diameter"] = str_replace(",", ".", $item["diametr"]);
+        $this->params["bolts_count"] = $item["holes"];
+        $this->params["bolts_spacing"] = str_replace(",", ".", $item["pcd"]);
+        $this->params["et"] = str_replace(",", ".", $item["et"]);
+        $this->params["dia"] = str_replace(",", ".", $item["dia"]);
+        $this->params["color"] = $item["color"];
+        $this->params["type"] = $item["type"]; //TODO
+        //$this->params["store_id"] = $item["stockName"];
+    }
+    
+    protected function convertToSize() {
+        $this->size = sprintf("%sx%s %sx%s ET%s D%s %s", 
+                              $this->params["width"],
+                              $this->params["diameter"],
+                              $this->params["bolts_count"],
+                              $this->params["bolts_spacing"],
+                              $this->params["et"],
+                              $this->params["dia"],
+                              $this->params["color"]
+                             );
+    }
+    
+    protected function normalizeModel($marka, $model) {
+        /*
+        if ($marka == "Nokian") //Nokian H-8 => Nokian Hakkapeliitta 8
+            $model = str_replace("H-", "Hakkapeliitta ", $model);
+        */
+        return $model;
+    }
+}
 ?>

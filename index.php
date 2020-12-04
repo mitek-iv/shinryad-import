@@ -25,32 +25,44 @@
         $step = 0;
     else $step = (int) $_REQUEST["step"];
 
-    if ($step == 0) {
-        toLog("\r\n---Запуск обработки---", true);
-        dbImport::clearTables();
+    if (file_exists("start.txt")) {//Если файл существует, то значит скрипт уже выполняется на каком-то шаге
+        @unlink("start.txt");
+        die();
     }
-    else
-        toLog("Шаг $step");
 
+    if ($step == 0) {
+        toLog("\r\n");
+        toLog("---Запуск обработки---", true);
+        dbImport::clearTables();
+        $hr = $_SERVER["PHP_SELF"];
+        header("location: $hr?step=1");
+        exit();
+    } else {
+        toLog("Шаг $step");
+    }
+
+    
     $classes_to_process = [
-        "dbImport4tochkiTyre", 
+        //"dbImport4tochkiTyre", 
         //"dbImport4tochkiDisc", 
-        "dbImportKolesaDaromTyre",
+        //"dbImportKolesaDaromTyre",
         //"dbImportKolesaDaromDisc",
-        "dbImportShinInvestTyre",
+        //"dbImportShinInvestTyre",
+        "dbImportShinInvestDisc",
     ];
     
-    if (isset($classes_to_process[$step])) {
-        $class = $classes_to_process[$step];
+    file_put_contents("start.txt", date("d.m.Y H:i:s"), FILE_APPEND | LOCK_EX); //В начале выполнения каждого шага создаём файл
+    if (isset($classes_to_process[$step - 1])) {
+        $class = $classes_to_process[$step - 1];
         $import = new $class();
         $import->getFromSource();
         //die();
         $import->storeToDB();
         unset($import);
-    } elseif ($step == count($classes_to_process)) {
+    } elseif ($step == count($classes_to_process) + 1) {
         dbImport::compactProductList();
     }
-
+    @unlink("start.txt"); //В конце выполнения каждого шага удаляем файл
     
     $time = microtime(true) - $start;
     $time = number_format($time, 2, ".", "");
@@ -60,8 +72,9 @@
 
     $step++;
     
-    if ($step > count($classes_to_process)) {
-        toLog("---Конец обработки---", true);    
+    if ($step > count($classes_to_process) + 1) {
+        toLog("---Конец обработки---", true);   
+        print "---Конец обработки---";
     } else {
         $hr = $_SERVER["PHP_SELF"];
         toLog("location: $hr?step=$step");

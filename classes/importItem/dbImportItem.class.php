@@ -16,7 +16,7 @@ class dbImportItem { //Элемент (товар), полученный при 
     
     
     public function queryString(int $provider_id) {
-        if ($this->count <= 0) return null;
+        //if ($this->count <= 0) return null;
         if (htmlspecialchars($this->model, ENT_QUOTES) == "") return null;
             
         return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s')",

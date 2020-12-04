@@ -62,7 +62,7 @@ class dbImport extends commonClass {
         $db = new db();
         $db->query("
             INSERT INTO imp_product_compact
-            SELECT * FROM imp_product_full WHERE id IN (
+            SELECT *, 0 as is_processed FROM imp_product_full WHERE id IN (
                 SELECT MAX(id) as id
                 FROM (
                     SELECT P1.id, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`

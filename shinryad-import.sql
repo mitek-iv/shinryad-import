@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1:3306
--- Время создания: Дек 02 2020 г., 09:45
+-- Время создания: Дек 04 2020 г., 10:57
 -- Версия сервера: 5.7.25
 -- Версия PHP: 7.2.10
 
@@ -42,7 +42,8 @@ CREATE TABLE `imp_product_compact` (
   `price` decimal(10,0) NOT NULL DEFAULT '0' COMMENT 'Розничная цена',
   `count` int(11) NOT NULL DEFAULT '0' COMMENT 'Количество',
   `params` text COMMENT 'Параметры',
-  `img` text
+  `img` text,
+  `is_processed` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -120,7 +121,8 @@ ALTER TABLE `imp_product_compact`
   ADD KEY `type_id` (`type_id`) USING BTREE,
   ADD KEY `size` (`size`),
   ADD KEY `marka` (`marka`),
-  ADD KEY `model` (`model`);
+  ADD KEY `model` (`model`),
+  ADD KEY `is_processed` (`is_processed`);
 
 --
 -- Индексы таблицы `imp_product_full`

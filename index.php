@@ -43,11 +43,11 @@
 
     
     $classes_to_process = [
-        //"dbImport4tochkiTyre", 
-        //"dbImport4tochkiDisc", 
-        //"dbImportKolesaDaromTyre",
-        //"dbImportKolesaDaromDisc",
-        //"dbImportShinInvestTyre",
+        "dbImport4tochkiTyre", 
+        "dbImport4tochkiDisc", 
+        "dbImportKolesaDaromTyre",
+        "dbImportKolesaDaromDisc",
+        "dbImportShinInvestTyre",
         "dbImportShinInvestDisc",
     ];
     

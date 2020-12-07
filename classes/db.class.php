@@ -66,9 +66,11 @@
             if ($this->mysqli->connect_error) {
                 throw new Exception("Ошибка соединения с БД");
             }
-			if (isset($db_charset))
+			if (!empty($conf->val("db_charset"))) {
+                $db_charset = $conf->val("db_charset");
 				$this->mysqli->set_charset($db_charset);
-            
+                $this->query("SET NAMES $db_charset");
+            }
             $this->query("SET time_zone = 'Asia/Yekaterinburg'");
         }
 

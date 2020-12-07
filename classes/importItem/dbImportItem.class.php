@@ -65,11 +65,11 @@ class dbImportItem { //Элемент (товар), полученный при 
         if (strpos($mdl[0], "-") !== false) {
             $mdl_parts = explode("-", $mdl[0]);  
             foreach($mdl_parts as &$part) {
-                $part = ucfirst(strtolower($part));
+                $part = mb_convert_case($part, MB_CASE_TITLE);
             }
             $mdl[0] = implode("-", $mdl_parts);
         } else {
-            $mdl[0] = ucfirst(strtolower($mdl[0]));
+            $mdl[0] = mb_convert_case($mdl[0], MB_CASE_TITLE);
         }
         
         return implode(" ", $mdl);

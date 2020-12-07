@@ -49,7 +49,7 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
         $this->params["thorn"] = $item["shipi"];
         $seasons = ["Летние" => "s", "Зимние" => "w", "Всесезонные" => "u"];
         
-        $this->params["season"] = (is_array($item["season"])) ? "u" : $seasons[$item["season"]];
+        $this->params["season"] = (empty($item["season"])) ? "u" : $seasons[$item["season"]];
         //$this->params["store_id"] = $item["stockName"];
     }
     

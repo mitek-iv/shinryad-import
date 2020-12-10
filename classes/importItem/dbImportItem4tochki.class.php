@@ -103,10 +103,11 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
         if (preg_match('/[0-9]/', $prms[1], $pos, PREG_OFFSET_CAPTURE) > 0) {
             $this->params["radius"] = substr($prms[1], $pos[0][1]);
         }
-        if (preg_match('/[a-zA-Z]/', $prms[2], $pos, PREG_OFFSET_CAPTURE) > 0) {
-            $this->params["index_loading"] = substr($prms[2], 0, $pos[0][1]);
-            $this->params["index_speed"] = substr($prms[2], $pos[0][1]);
-        }    
+        if (isset($prms[2]))
+            if (preg_match('/[a-zA-Z]/', $prms[2], $pos, PREG_OFFSET_CAPTURE) > 0) {
+                $this->params["index_loading"] = substr($prms[2], 0, $pos[0][1]);
+                $this->params["index_speed"] = substr($prms[2], $pos[0][1]);
+            }    
     }
     
     

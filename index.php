@@ -34,6 +34,7 @@
         toLog("\r\n");
         toLog("---Запуск обработки---", true);
         dbImport::clearTables();
+        sleep(1);
         $hr = $_SERVER["PHP_SELF"];
         header("location: $hr?step=1");
         exit();

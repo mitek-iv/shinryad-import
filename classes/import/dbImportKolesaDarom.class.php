@@ -1,9 +1,14 @@
 <?php
 class dbImport4KolesaDarom extends dbImport {
     protected $provider_id = 2;
-    protected $fileName = "1/importcsv.csv";
-    
+    protected $fileName; //путь к csv-файлу выгрузки 
     protected $products; //массив из csv, до формирования $this->items
+    
+    
+    public function __construct() {
+        $this->fileName = $_SERVER["DOCUMENT_ROOT"] . "/1/importcsv.csv";
+    }
+    
     
     public function getFromSource() {
         parent::getFromSource();

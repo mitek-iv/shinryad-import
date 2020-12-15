@@ -27,6 +27,7 @@ class bitixImport extends commonClass {
     * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
     */
     public function getFromDB() {
+        $this->toLog("Получение сжатого прайс-листа из БД");
         global $conf;
         
         $db = new db();
@@ -53,7 +54,7 @@ class bitixImport extends commonClass {
     * Если не находит, то ставит кол-во 0 и деактивирует
     */    
     public function updateExistingProducts() {
-        
+        $this->toLog("Обновление остатков у существующих товаров");
     }
     
     /*
@@ -61,7 +62,7 @@ class bitixImport extends commonClass {
     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
     */
     public function insertNewProducts() {
-        
+        $this->toLog("Добавление новых товаров");
     }
 }
 ?>

@@ -10,6 +10,7 @@ class megaImport {
     
     public static function printMenu() {
         $url_price = self::getNextStepUrl("price");
+        $url_export = self::getNextStepUrl("export");
 
         $result = "
             <h3>НОВЫЙ импорт</h3>
@@ -27,7 +28,7 @@ class megaImport {
                 }
             </style>
             <a href='$url_price' class='button'>Сформировать консолидированный прайс</a>
-            <a href='#' class='button'>Выгрузить прайс в каталог сайта</a>";
+            <a href='$url_export' class='button'>Выгрузить прайс в каталог сайта</a>";
 
         print $result;
     }
@@ -35,22 +36,6 @@ class megaImport {
 
     public static function preparePrice() {
         $start = microtime(true);
-
-        include("classes/commonClass.class.php");
-        include("classes/db.class.php");
-        include("classes/csv.class.php");
-
-        include("classes/importItem/dbImportItem.class.php");
-        include("classes/importItem/dbImportItem4tochki.class.php");
-        include("classes/importItem/dbImportItemKolesaDarom.class.php");
-        include("classes/importItem/dbImportItemShinInvest.class.php");
-
-        include("classes/import/dbImport.class.php");
-        include("classes/import/dbImport4tochki.class.php");
-        include("classes/import/dbImportKolesaDarom.class.php");
-        include("classes/import/dbImportShinInvest.class.php");
-
-
 
         if (!isset($_REQUEST["step"]))
             $step = 0;
@@ -106,6 +91,52 @@ class megaImport {
         $step++;
 
         if ($step > count($classes_to_process) + 1) {
+            toLog("---Конец обработки---", true);   
+            print "---Конец обработки---";
+        } else {
+            $url = self::getNextStepUrl(null, $step);
+            toLog("location: $url");
+            header("location: $url");
+            exit;
+        }
+    }
+    
+    
+    public static function exportPriceToBitrixCatalog() {
+        $start = microtime(true);
+
+        if (!isset($_REQUEST["step"]))
+            $step = 0;
+        else $step = (int) $_REQUEST["step"];
+
+        if (file_exists("start.txt")) {//Если файл существует, то значит скрипт уже выполняется на каком-то шаге
+            @unlink("start.txt");
+            die();
+        }
+
+        if ($step == 0) {
+            toLog("\r\n");
+            toLog("---Запуск обработки---", true);
+            sleep(1);
+            $url = self::getNextStepUrl(null, 1);
+            toLog("location: $url");
+            header("location: $url");
+            exit();
+        } else {
+            toLog("Шаг $step");
+        }
+
+        $step++;
+        
+        $bitrixImport = new bitixImport();
+        $bitrixImport->getFromDB();
+        $bitrixImport->updateExistingProducts();
+        $bitrixImport->insertNewProducts();
+
+        //printArray($bitrixImport);
+        unset($bitrixImport);
+        
+        if ($step > 1) {
             toLog("---Конец обработки---", true);   
             print "---Конец обработки---";
         } else {

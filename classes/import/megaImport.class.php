@@ -103,6 +103,11 @@ class megaImport {
     
     
     public static function exportPriceToBitrixCatalog() {
+        $bitrixImport = new bitixImport();
+        $bitrixImport->getFromDB();
+        $bitrixImport->updateExistingProducts();
+        die();
+        
         $start = microtime(true);
 
         if (!isset($_REQUEST["step"]))
@@ -128,6 +133,7 @@ class megaImport {
 
         $step++;
         
+        CModule::IncludeModule('iblock');  
         $bitrixImport = new bitixImport();
         $bitrixImport->getFromDB();
         $bitrixImport->updateExistingProducts();

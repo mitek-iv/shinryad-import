@@ -11,12 +11,18 @@ class IblockElementPropertyTable extends Entity\DataManager {
         return
             array(
                 new Entity\IntegerField(
-                    'IBLOCK_ELEMENT_ID',
+                    'ID',
                     array(
                         'primary' => true
                     )
                 ),
-		new Entity\IntegerField(
+                new Entity\IntegerField(
+                    'IBLOCK_ELEMENT_ID',
+                    array(
+                        'required' => true
+                    )
+                ),
+		        new Entity\IntegerField(
                     'IBLOCK_PROPERTY_ID',
                     array(
                         'required' => true

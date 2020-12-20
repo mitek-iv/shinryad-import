@@ -7,11 +7,15 @@ use Bitrix\Iblock\ElementTable;
 
 class bitixImportProduct extends dbImportItem {
     public $bitrix_catalog_id; //ид-р товара в каталоге Битрикса
+    public $bitrix_price_id; //ид-р цены в каталоге Битрикса
     public $is_processed = false;
+
+    protected $prop_price_old_id;
+    protected $prop_price_min_id;
     
     public function __construct(array $source) {
         $this->id = $source["code"];
-        $this->product_type = $source["type_id"];
+        //$this->product_type = $source["type_id"];
         $this->marka = $source["marka"];
         $this->model = $source["model"];
         $this->size = $source["size"];
@@ -23,15 +27,49 @@ class bitixImportProduct extends dbImportItem {
         $this->params = json_decode($source["params"], true);
         $this->is_processed = ($source["is_processed"] == 1);
     }
+
+
+    public function updatePriceCount() {
+        if (empty($this->bitrix_catalog_id))
+            return false;
+
+        //printArray($this);
+        $dbResult = \Bitrix\Catalog\ProductTable::update($this->bitrix_catalog_id, ["QUANTITY" => $this->count]);
+        $dbResult = \Bitrix\Catalog\PriceTable::update($this->bitrix_price_id, ["PRICE" => $this->price]);
+
+        //Апдейтим свойства Минимальная цена и Старая цена
+        $PROP = array();
+        $PROP[$this->prop_price_old_id] = $this->roundPrice($this->price * 1.1); //Минимальная цена
+        $PROP[$this->prop_price_min_id] = $this->price_opt + 100; //Старая цена
+        CIBlockElement::SetPropertyValuesEx($this->bitrix_catalog_id, false, $PROP);
+
+        return true;
+    }
 }
 
+
+class bitixImportProductTyre extends bitixImportProduct {
+    protected $product_type = 1;
+    protected $prop_price_old_id = 421;
+    protected $prop_price_min_id = 447;
+}
+
+
+class bitixImportProductDisc extends bitixImportProduct {
+    protected $product_type = 2;
+    protected $prop_price_old_id = 454;
+    protected $prop_price_min_id = 444;
+}
+
+
+//--------------------------------------------------------------
 
 class bitixImport extends commonClass {
     protected $items = array(); //of bitixImportProduct
     protected $item_tree = array(); //items в виде дерева
     protected $catalog_products = array(); //Товары, полученные из каталога битрикс
     
-    /*
+    /**
     * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
     */
     public function getFromDB() {
@@ -50,7 +88,11 @@ class bitixImport extends commonClass {
         $is_processed = [];
         if(!empty($res))
             foreach($res as $item) {
-                $product = new bitixImportProduct($item);
+                if ($item["type_id"] == 1)
+                    $product = new bitixImportProductTyre($item);
+                else
+                    $product = new bitixImportProductDisc($item);
+
                 $this->items[] = $product;
                 $this->item_tree[$item["type_id"]][$item["marka"]][$item["model"]][$item["size"]] = $product;
             }
@@ -60,19 +102,17 @@ class bitixImport extends commonClass {
     }
     
     
-    /*
+    /**
     * Пробегается по товарам из каталога битрикс и пытается найти аналогичный товар из $items
     * Если находит, то обновляет остатки и ставит флаг у товара в $items is_processed = true   
     * Если не находит, то ставит кол-во 0 и деактивирует
     */    
     public function updateExistingProducts() {
-        //$dbResult = \Bitrix\Catalog\ProductTable::updateMulti([], ["QUANTITY" => 0]);
-        //$dbResult = \Bitrix\Catalog\PriceTable::updateMulti([20048, 20049, 20050], ["PRICE" => 999]);
-
         $this->toLog("Обновление остатков у существующих товаров");
         $this->getProductsFromCatalog();
-        $this->ResetCountInCatalog();
+        $this->resetCountInCatalog();
         $this->findAnalogItems();
+        $this->updatePriceCount();
 
         print count($this->catalog_products);
 
@@ -88,9 +128,8 @@ class bitixImport extends commonClass {
 //        }
 
         unset($res);
-
     }
-    /*
+    /**
     * Пробегается по $items. Если is_processed = false
     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
     */
@@ -98,7 +137,10 @@ class bitixImport extends commonClass {
         $this->toLog("Добавление новых товаров");
     }
 
-
+    /**
+     * Получает список товаров из каталога
+     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
+     */
     protected function getProductsFromCatalog() {
         $dbQuery = ElementTable::query()
             //Подтягиваем родительскую категорию
@@ -119,42 +161,45 @@ class bitixImport extends commonClass {
             //Вычисляемое поле
             ->registerRuntimeField("SIZE", [
                     "data_type" => "string",
-                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "NAME", "MODEL.NAME"]
+                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "NAME", "MODEL.NAME"],
+                    'join_type' => "LEFT"
                 ]
             )
             //Вычисляемое поле
             ->registerRuntimeField("MODEL_NAME", [
                     "data_type" => "string",
-                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "MODEL.NAME", "PROIZV.NAME"]
+                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "MODEL.NAME", "PROIZV.NAME"],
+                    'join_type' => "LEFT"
                 ]
             )
-//            ->registerRuntimeField("PROPERTY", [
-//                    'data_type' => 'IblockElementPropertyTable',
-//                    'reference' => array('=this.ID' => 'ref.IBLOCK_ELEMENT_ID', '=ref.IBLOCK_PROPERTY_ID' => array(116)), //,
-//                ]
-//            )
-//            ->registerRuntimeField("PROPERTY1", [
-//                    'data_type' => 'IblockElementPropertyTable',
-//                    'reference' => array('=this.ID' => 'ref.IBLOCK_ELEMENT_ID', '=ref.IBLOCK_PROPERTY_ID' => array(117)), //,
-//                ]
-//            )
             ->registerRuntimeField("PRODUCT", [
                     'data_type' => '\Bitrix\Catalog\ProductTable',
                     'reference' => array('=this.ID' => 'ref.ID'),
+                    'join_type' => "LEFT"
                 ]
             )
             ->registerRuntimeField("PRICE", [
                     'data_type' => '\Bitrix\Catalog\PriceTable',
                     'reference' => array('=this.ID' => 'ref.PRODUCT_ID'),
+                    'join_type' => "LEFT"
                 ]
             )
-            ->setSelect(['ID', 'IBLOCK_ID', 'IBLOCK_SECTION_ID', 'NAME', "MODEL_NAME", "MARKA" => 'PROIZV.NAME', 'SIZE', 'QUANTITY' => 'PRODUCT.QUANTITY', 'PRICE_ID' => 'PRICE.ID', 'PRICE_VALUE' => 'PRICE.PRICE']) //'WIDTH' => 'PROPERTY.VALUE', 'HEIGHT' => 'PROPERTY1.VALUE',
+            ->setSelect([
+                'ID',
+                'IBLOCK_ID',
+                'IBLOCK_SECTION_ID',
+                'NAME',
+                "MODEL_NAME",
+                "MARKA" => 'PROIZV.NAME',
+                'SIZE',
+                'QUANTITY' => 'PRODUCT.QUANTITY',
+                'PRICE_ID' => 'PRICE.ID',
+                'PRICE_VALUE' => 'PRICE.PRICE',
+            ])
             ->setFilter(['=IBLOCK_ID' => [16, 19]])
             //->setLimit(1000)
             ->setOrder(['ID' => 'ASC']);
             //->setSelect(['*'])
-
-
 
         //print "<pre>" . $dbQuery->getQuery() . "</pre>";
         $dbItems = $dbQuery->exec();
@@ -164,10 +209,10 @@ class bitixImport extends commonClass {
         }
     }
 
-    /*
+    /**
      * Обнуляет остатки во всём каталоге
      */
-    protected function ResetCountInCatalog() {
+    protected function resetCountInCatalog() {
         $this->toLog("Обнуляем остатков у всех товаров в каталоге");
         if (empty($this->catalog_products)) return;
 
@@ -179,7 +224,9 @@ class bitixImport extends commonClass {
             $dbResult = \Bitrix\Catalog\ProductTable::updateMulti($ids, ["QUANTITY" => 0]);
     }
 
-
+    /**
+     * Ищет связь между элементами из БД и реальными товарами
+     */
     protected function findAnalogItems() {
         $this->toLog("Ищем связь между элементами из БД и реальными товарами");
         if (empty($this->catalog_products)) return;
@@ -191,21 +238,26 @@ class bitixImport extends commonClass {
             $size = $product["SIZE"];
             //print "$type_id - $marka - $model - $size<br>";
             if (isset($this->item_tree[$type_id][$marka][$model][$size])) {
-
                 $item = $this->item_tree[$type_id][$marka][$model][$size];
                 $item->bitrix_catalog_id = $product["ID"];
+                $item->bitrix_price_id = $product["PRICE_ID"];
             }
         }
+    }
 
+
+    /**
+     * Обновляет цену и количество у товара
+     */
+    protected function updatePriceCount() {
         $total = 0;
         foreach($this->items as $item) {
-            if (!empty($item->bitrix_catalog_id)) {
-                //printArray($item);
+            $result = $item->updatePriceCount();
+            if ($result)
                 $total++;
-            }
         }
 
-        print "Нашёл связь у $total<br>";
+        print "Обновил остатки-цены у $total<br>";
     }
 }
 ?>

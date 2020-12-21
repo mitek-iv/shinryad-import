@@ -1,16 +1,24 @@
 <?php
-class megaImport {
-    public static function getNextStepUrl($mode, $step = 0) {
-        if (is_null($mode)) 
-            global $mode;
+class megaImport extends commonClass {
+    protected $start;
+    protected $step_time;
+    protected $step;
+    protected $tmp_file_name = "start.txt";
+    
+    
+    public function __construct() {
+        $this->start = microtime(true);   
         
-        return sprintf("%s?mode=%s&step=%d", $_SERVER["PHP_SELF"], $mode, $step);
+        if (!isset($_REQUEST["step"]))
+            $this->step = 0;
+        else 
+            $this->step = (int) $_REQUEST["step"];
     }
     
     
-    public static function printMenu() {
-        $url_price = self::getNextStepUrl("price");
-        $url_export = self::getNextStepUrl("export");
+    public function printMenu() {
+        $url_price = $this->getNextStepUrl("price");
+        $url_export = $this->getNextStepUrl("export");
 
         $result = "
             <h3>НОВЫЙ импорт</h3>
@@ -34,31 +42,19 @@ class megaImport {
     }
     
 
-    public static function preparePrice() {
-        $start = microtime(true);
-
-        if (!isset($_REQUEST["step"]))
-            $step = 0;
-        else $step = (int) $_REQUEST["step"];
-
-        if (file_exists("start.txt")) {//Если файл существует, то значит скрипт уже выполняется на каком-то шаге
-            @unlink("start.txt");
+    public function preparePrice() {
+        if ($this->checkScriptIsRunning())
             die();
-        }
 
-        if ($step == 0) {
-            toLog("\r\n");
-            toLog("---Запуск обработки---", true);
+        if ($this->step == 0) {
+            $this->startScript();
             dbImport::clearTables();
             sleep(1);
-            $url = self::getNextStepUrl(null, 1);
-            toLog("location: $url");
-            header("location: $url");
-            exit();
+            $url = $this->getNextStepUrl(null, 1);
+            $this->goURL($url);
         } else {
-            toLog("Шаг $step");
+            $this->toLog("Шаг " . $this->step);
         }
-
 
         $classes_to_process = [
             "dbImport4tochkiTyre", 
@@ -69,88 +65,123 @@ class megaImport {
             "dbImportShinInvestDisc",
         ];
 
-        file_put_contents("start.txt", date("d.m.Y H:i:s"), FILE_APPEND | LOCK_EX); //В начале выполнения каждого шага создаём файл
-        if (isset($classes_to_process[$step - 1])) {
-            $class = $classes_to_process[$step - 1];
+        $this->createScriptIsRunningFile();
+        
+        if (isset($classes_to_process[$this->step - 1])) {
+            $class = $classes_to_process[$this->step - 1];
             $import = new $class();
             $import->getFromSource();
             //die();
             $import->storeToDB();
             unset($import);
-        } elseif ($step == count($classes_to_process) + 1) {
+        } elseif ($this->step == count($classes_to_process) + 1) {
             dbImport::compactProductList();
         }
-        @unlink("start.txt"); //В конце выполнения каждого шага удаляем файл
+        
+        $this->deleteScriptIsRunningFile();
 
-        $time = microtime(true) - $start;
-        $time = number_format($time, 2, ".", "");
-        toLog("Время выполнения шага: $time сек.");
+        $this->step++;
+        $this->calcStepTime();
 
-        unset($conf);
-
-        $step++;
-
-        if ($step > count($classes_to_process) + 1) {
-            toLog("---Конец обработки---", true);   
-            print "---Конец обработки---";
+        if ($this->step > count($classes_to_process) + 1) {
+            $this->finishScript();
         } else {
-            $url = self::getNextStepUrl(null, $step);
-            toLog("location: $url");
-            header("location: $url");
-            exit;
+            $url = $this->getNextStepUrl(null, $this->step);
+            $this->goURL($url);
         }
     }
     
     
-    public static function exportPriceToBitrixCatalog() {
-        $bitrixImport = new bitixImport();
-        $bitrixImport->getFromDB();
-        $bitrixImport->updateExistingProducts();
-        die();
-        
-        $start = microtime(true);
-
-        if (!isset($_REQUEST["step"]))
-            $step = 0;
-        else $step = (int) $_REQUEST["step"];
-
-        if (file_exists("start.txt")) {//Если файл существует, то значит скрипт уже выполняется на каком-то шаге
-            @unlink("start.txt");
+    public function exportPriceToBitrixCatalog() {
+        if ($this->checkScriptIsRunning())
             die();
-        }
-
-        if ($step == 0) {
-            toLog("\r\n");
-            toLog("---Запуск обработки---", true);
-            sleep(1);
-            $url = self::getNextStepUrl(null, 1);
-            toLog("location: $url");
-            header("location: $url");
-            exit();
-        } else {
-            toLog("Шаг $step");
-        }
-
-        $step++;
         
-        CModule::IncludeModule('iblock');  
-        $bitrixImport = new bitixImport();
-        $bitrixImport->getFromDB();
+        if ($this->step == 0) {
+            $this->startScript();
+            sleep(1);
+            $url = $this->getNextStepUrl(null, 1);
+            $this->goURL($url);
+        } else {
+            $this->toLog("Шаг " . $this->step);
+        }
+
+        $this->createScriptIsRunningFile();
+        
+        $bitrixImport = new bitixImport(5000);
+        $total_step_count = $bitrixImport->getTotalStepCount();
+        $bitrixImport->getFromDB($this->step);
         $bitrixImport->updateExistingProducts();
         $bitrixImport->insertNewProducts();
-
-        //printArray($bitrixImport);
         unset($bitrixImport);
         
-        if ($step > 1) {
-            toLog("---Конец обработки---", true);   
-            print "---Конец обработки---";
+        $this->deleteScriptIsRunningFile();
+        
+        $this->step++;
+        $this->calcStepTime();
+        
+        if ($this->step > $total_step_count) {
+            $this->finishScript();
         } else {
-            $url = self::getNextStepUrl(null, $step);
-            toLog("location: $url");
-            header("location: $url");
-            exit;
+            $url = $this->getNextStepUrl(null, $this->step);
+            $this->goURL($url);
         }
+    }
+    
+    
+    protected function calcStepTime() {
+        $time = microtime(true) - $this->start;
+        $this->step_time = number_format($time, 2, ".", "");
+        $this->toLog(sprintf("Время выполнения шага: %d сек.", $this->step_time));
+    }
+    
+    
+    protected function getNextStepUrl($mode, $step = 0) {
+        if (is_null($mode)) 
+            global $mode;
+        
+        $url = sprintf("%s?mode=%s&step=%d", $_SERVER["PHP_SELF"], $mode, $step);
+        
+        return $url;
+    }
+    
+    
+    protected function checkScriptIsRunning() {
+        $result = false;
+        if (file_exists($this->tmp_file_name)) {//Если файл существует, то значит скрипт уже выполняется на каком-то шаге
+            $this->deleteScriptIsRunningFile();
+            $result = true;
+        }
+        
+        return $result;
+    }
+    
+    
+    protected function createScriptIsRunningFile() {
+        file_put_contents($this->tmp_file_name, date("d.m.Y H:i:s"), FILE_APPEND | LOCK_EX); //В начале выполнения каждого шага создаём файл
+    }
+    
+    
+    protected function deleteScriptIsRunningFile() {
+        @unlink($this->tmp_file_name);
+    }
+    
+    
+    protected function startScript() {
+        $this->toLog("\r\n");
+        $this->toLog("---Запуск обработки---", true);    
+    }
+    
+    
+    protected function finishScript() {
+        $this->toLog("---Конец обработки---", true);   
+        print "---Конец обработки---";
+    }
+    
+    
+    protected function goURL($url) {
+        $this->toLog("location: $url");
+        header("location: $url");
+        exit;
     }
 }
 ?>

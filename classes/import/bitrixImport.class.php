@@ -6,6 +6,7 @@ use Bitrix\Iblock\ElementTable;
 
 
 class bitixImportProduct extends dbImportItem {
+    public $import_id; //ид-р строки в таблице импорта (imp_product_compact)
     public $bitrix_catalog_id; //ид-р товара в каталоге Битрикса
     public $bitrix_price_id; //ид-р цены в каталоге Битрикса
     public $is_processed = false;
@@ -14,6 +15,7 @@ class bitixImportProduct extends dbImportItem {
     protected $prop_price_min_id;
     
     public function __construct(array $source) {
+        $this->import_id = $source["id"];
         $this->id = $source["code"];
         //$this->product_type = $source["type_id"];
         $this->marka = $source["marka"];
@@ -29,6 +31,9 @@ class bitixImportProduct extends dbImportItem {
     }
 
 
+    /**
+    * Обновление остатков у одного товара
+    */
     public function updatePriceCount() {
         if (empty($this->bitrix_catalog_id))
             return false;
@@ -65,24 +70,51 @@ class bitixImportProductDisc extends bitixImportProduct {
 //--------------------------------------------------------------
 
 class bitixImport extends commonClass {
+    protected $items_per_step; //количество позиций, обрабатываемых за один шаг
     protected $items = array(); //of bitixImportProduct
     protected $item_tree = array(); //items в виде дерева
     protected $catalog_products = array(); //Товары, полученные из каталога битрикс
     
-    /**
-    * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
-    */
-    public function getFromDB() {
-        $this->toLog("Получение сжатого прайс-листа из БД");
+    
+    public function __construct($items_per_step = 2000) {
+        $this->items_per_step = $items_per_step;
+    }
+    
+    
+    public function getTotalStepCount() {
+        $this->toLog("Вычисление требуемого количества шагов");
         global $conf;
         
         $db = new db();
-        $res = $db->query("
+        $rc = $db->val("
+            SELECT COUNT(*) as rs
+            FROM imp_product_compact 
+            WHERE 1 
+        ");    
+        
+        $total_step_count = ceil($rc / $this->items_per_step);
+        $this->toLog("Всего позиций: $rc; Требуется шагов: $total_step_count");
+        return $total_step_count;
+    }
+    
+    
+    /**
+    * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
+    */
+    public function getFromDB($step = 1) {
+        $this->toLog("Получение сжатого прайс-листа из БД");
+        global $conf;
+        
+        $limit_from = (($step - 1) * $this->items_per_step);
+        $this->toLog("limit_from: $limit_from");
+        $db = new db();
+        $res = $db->query(sprintf("
             SELECT * 
             FROM imp_product_compact 
-            WHERE type_id = 1 
+            WHERE is_processed = 0
             ORDER BY type_id, marka, model, size
-        ");
+            LIMIT %d, %d
+        ", $limit_from, $this->items_per_step));
         
         $products = [];
         $is_processed = [];
@@ -97,7 +129,7 @@ class bitixImport extends commonClass {
                 $this->item_tree[$item["type_id"]][$item["marka"]][$item["model"]][$item["size"]] = $product;
             }
 
-        print("Загружено " . count($this->items) . "<br>");
+        $this->toLog("Загружено " . count($this->items));
         //printArray($this->item_tree);
     }
     
@@ -113,8 +145,8 @@ class bitixImport extends commonClass {
         $this->resetCountInCatalog();
         $this->findAnalogItems();
         $this->updatePriceCount();
-
-        print count($this->catalog_products);
+        $this->storeProcessedItems();
+        //print count($this->catalog_products);
 
 
 //        $connection = Bitrix\Main\Application::getConnection();
@@ -129,6 +161,8 @@ class bitixImport extends commonClass {
 
         unset($res);
     }
+    
+    
     /**
     * Пробегается по $items. Если is_processed = false
     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
@@ -209,6 +243,7 @@ class bitixImport extends commonClass {
         }
     }
 
+    
     /**
      * Обнуляет остатки во всём каталоге
      */
@@ -224,6 +259,7 @@ class bitixImport extends commonClass {
             $dbResult = \Bitrix\Catalog\ProductTable::updateMulti($ids, ["QUANTITY" => 0]);
     }
 
+    
     /**
      * Ищет связь между элементами из БД и реальными товарами
      */
@@ -253,11 +289,32 @@ class bitixImport extends commonClass {
         $total = 0;
         foreach($this->items as $item) {
             $result = $item->updatePriceCount();
-            if ($result)
+            if ($result) {
+                $item->is_processed = true;
                 $total++;
+            }
         }
 
-        print "Обновил остатки-цены у $total<br>";
+        $this->toLog("Обновил остатки-цены у $total");
+    }
+    
+    
+    /**
+    * Апдейтим статус у обработанных позиций
+    */
+    protected function storeProcessedItems() {
+        $ids = [];
+        foreach($this->items as $item)
+            if ($item->is_processed)
+                $ids[] = $item->import_id;
+        
+        if (empty($ids)) return; 
+        
+        global $conf;
+        
+        $db = new db();
+        $res = $db->query(sprintf("UPDATE imp_product_compact SET `is_processed` = '1' WHERE `code` IN (%s)", implode(", ", $ids)));
+        unset($db);
     }
 }
 ?>

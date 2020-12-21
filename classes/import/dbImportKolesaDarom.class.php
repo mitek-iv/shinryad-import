@@ -67,7 +67,7 @@ class dbImport4KolesaDarom extends dbImport {
         }
         //!
         
-        $this->get_images_for_products();
+        //$this->get_images_for_products();
         //printArray($this->products);
         
         $this->convertToItems($this->products);

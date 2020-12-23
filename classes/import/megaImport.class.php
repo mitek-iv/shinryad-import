@@ -14,11 +14,22 @@ class megaImport extends commonClass {
         else 
             $this->step = (int) $_REQUEST["step"];
     }
-    
-    
+
+
+    public function test() {
+        $bitrixImport = new bitixImport(2000);
+        //$total_step_count = $bitrixImport->getTotalStepCount();
+        $bitrixImport->getFromDB(1);
+        $bitrixImport->process();
+        //$bitrixImport->insertNewProducts();
+        unset($bitrixImport);
+    }
+
+
     public function printMenu() {
         $url_price = $this->getNextStepUrl("price");
         $url_export = $this->getNextStepUrl("export");
+        $url_test = $this->getNextStepUrl("test");
 
         $result = "
             <h3>НОВЫЙ импорт</h3>
@@ -36,7 +47,8 @@ class megaImport extends commonClass {
                 }
             </style>
             <a href='$url_price' class='button'>Сформировать консолидированный прайс</a>
-            <a href='$url_export' class='button'>Выгрузить прайс в каталог сайта</a>";
+            <a href='$url_export' class='button'>Выгрузить прайс в каталог сайта</a>
+            <a href='$url_test' class='button'>Test</a>";
 
         print $result;
     }
@@ -110,8 +122,8 @@ class megaImport extends commonClass {
         $bitrixImport = new bitixImport(5000);
         $total_step_count = $bitrixImport->getTotalStepCount();
         $bitrixImport->getFromDB($this->step);
-        $bitrixImport->updateExistingProducts();
-        $bitrixImport->insertNewProducts();
+        $bitrixImport->process();
+        //$bitrixImport->insertNewProducts();
         unset($bitrixImport);
         
         $this->deleteScriptIsRunningFile();
@@ -167,8 +179,7 @@ class megaImport extends commonClass {
     
     
     protected function startScript() {
-        $this->toLog("\r\n");
-        $this->toLog("---Запуск обработки---", true);    
+        $this->toLog("\r\n---Запуск обработки---", true);    
     }
     
     

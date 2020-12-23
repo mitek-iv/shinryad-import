@@ -1,5 +1,5 @@
 <?php
-class dbImportItem { //Элемент (товар), полученный при конвертации данных из источника (выгрузки поставщика)
+class dbImportItem extends commonClass { //Элемент (товар), полученный при конвертации данных из источника (выгрузки поставщика)
     protected $product_type; //Тип продукта 1 - шины, 2 - диски
     public $id;
     public $marka;

@@ -18,8 +18,11 @@ include("classes/import/dbImport.class.php");
 include("classes/import/dbImport4tochki.class.php");
 include("classes/import/dbImportKolesaDarom.class.php");
 include("classes/import/dbImportShinInvest.class.php");
-include("classes/import/bitrixImport.class.php");
 include("classes/import/megaImport.class.php");
+
+include("classes/bitrix/bitrixImport.class.php");
+include("classes/bitrix/bitrixImportItem.class.php");
+include("classes/bitrix/bitrixCatalogSection.class.php");
 
 $conf = new config("includes/config.inc.php");
 $mode = (isset($_REQUEST["mode"])) ? $_REQUEST["mode"] : "menu";
@@ -34,6 +37,9 @@ switch ($mode) {
         break;
     case "menu":
         $megaImport->printMenu();
+        break;
+    case "test":
+        $megaImport->test();
         break;
 }
 unset($megaImport);

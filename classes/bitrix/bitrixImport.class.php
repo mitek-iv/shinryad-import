@@ -4,14 +4,15 @@ class bitixImport extends commonClass {
     protected $items = array(); //of bitixImportProduct
     protected $item_tree = array(); //items в виде дерева
     protected $catalog_products = array(); //Товары, полученные из каталога битрикс
-    protected $bitrix_catalog_sections; //bitrixCatalogSections
+    protected $bitrix_catalog_sections; //bitrixCatalogSectionList
     protected $iblock_ids = array(16, 19);
     
     
     public function __construct($items_per_step = 2000) {
         $this->items_per_step = $items_per_step;
-        $this->bitrix_catalog_sections = new bitrixCatalogSection($this->iblock_ids);
-        $this->bitrix_catalog_sections->print();
+        $this->bitrix_catalog_sections = new bitrixCatalogSectionList($this->iblock_ids);
+        //$this->bitrix_catalog_sections->print();
+        //die();
     }
     
     
@@ -81,6 +82,10 @@ class bitixImport extends commonClass {
         $this->getProductsFromCatalog();
         $this->resetCountInCatalog();
         $this->findAnalogItems();
+//        foreach($this->items as $item) {
+//            print sprintf("%s -> %d<br>", $item->full_title, $item->bitrix_catalog_id);
+//        }
+        //die();
         $this->updatePriceCount();
         $this->insertNewProducts();
         $this->storeProcessedItems();
@@ -111,7 +116,6 @@ class bitixImport extends commonClass {
 
     /**
      * Получает список товаров из каталога
-     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
      */
     protected function getProductsFromCatalog() {
         $dbQuery = Bitrix\Iblock\ElementTable::query()
@@ -175,6 +179,7 @@ class bitixImport extends commonClass {
 
         //print "<pre>" . $dbQuery->getQuery() . "</pre>";
         $dbItems = $dbQuery->exec();
+        print "!!!" . $dbItems->getSelectedRowsCount();
         while ($arItem = $dbItems->fetch()) {
             //printArray($arItem);
             $this->catalog_products[] = $arItem;
@@ -211,7 +216,7 @@ class bitixImport extends commonClass {
             $model = $product["MODEL_NAME"];
             $size = $product["SIZE"];
 
-            //print "$type_id - $marka - $model - $size<br>";
+            print "$type_id - $marka - $model - $size - $product[ID]<br>";
             if (isset($this->item_tree[$type_id][$marka][$model][$size])) {
                 $item = $this->item_tree[$type_id][$marka][$model][$size];
                 $item->bitrix_catalog_id = $product["ID"];

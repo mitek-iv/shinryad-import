@@ -1,5 +1,49 @@
 <?php
-class bitrixCatalogSection {
+class bitrixCatalogSection extends commonClass {
+    public $id;
+    public $name;
+    public $parent_id;
+    public $iblock_id;
+    public $img;
+
+
+    public function __construct(array $source) {
+        $this->id = (isset($source["id"])) ? $source["id"] : null;
+        $this->name = $source["name"];
+        $this->parent_id = $source["parent_id"];
+        $this->iblock_id = $source["iblock_id"];
+        $this->img = (isset($source["img"])) ? $source["img"] : null;
+    }
+
+
+    public function isFirstLevel() {
+        return is_null($this->parent_id);
+    }
+
+
+    public function insert() {
+        $bs_child = new CIBlockSection;
+        $child_sections = Array(
+            //"ACTIVE" => date('d.m.Y H:i:s'),
+            "IBLOCK_SECTION_ID" => (is_null($this->parent_id)) ? false : $this->parent_id,
+            "ACTIVE" => "Y",
+            "IBLOCK_ID" => $this->iblock_id,
+            "CODE" => bitixImportItem::bx_translit($this->name), //CUtil::translit($this->categoryname, "ru" , $translit_params),
+            "NAME" => $this->name,
+            "SORT" => "500",
+            "PICTURE" => CFile::MakeFileArray($this->img),
+            //"DETAIL_PICTURE" => CFile::MakeFileArray($this->img)
+        );
+
+        $this->id = $bs_child->Add($child_sections); //, false, false, true
+        print sprintf("Добавил категорию %d/%s; ID = %d; img = %s<br>", $this->parent_id, $this->name, $this->id, $this->img);
+
+        return $this->id;
+    }
+}
+
+
+class bitrixCatalogSectionList {
     protected $iblock_ids = array();
     protected $first_level_sections = array();
     protected $section_tree = array();
@@ -19,19 +63,17 @@ class bitrixCatalogSection {
     }
 
 
-    public function find(string $section_name, int $iblock_id, $parent_section_id = null) {
-        $section_name = mb_strtolower($section_name);
-        if (is_null($parent_section_id)) {//1-ый уровень
-            if (isset($this->first_level_sections[$iblock_id][$section_name]))
-                return $this->first_level_sections[$iblock_id][$section_name];
+    public function find(bitrixCatalogSection $section) {
+        if ($section->isFirstLevel()) {//1-ый уровень
+            if (isset($this->first_level_sections[$section->iblock_id][$section->name]))
+                return $this->first_level_sections[$section->iblock_id][$section->name];
             else
-                return -1;
+                return null;
         } else {//2-ой уровень
-            //print "$iblock_id --- $parent_section_id --- $section_name<br>";
-            if (isset($this->section_tree[$iblock_id][$parent_section_id][$section_name]))
-                return $this->section_tree[$iblock_id][$parent_section_id][$section_name];
+            if (isset($this->section_tree[$section->iblock_id][$section->parent_id][$section->name]))
+                return $this->section_tree[$section->iblock_id][$section->parent_id][$section->name];
             else
-                return -1;
+                return null;
         }
     }
 
@@ -40,10 +82,23 @@ class bitrixCatalogSection {
      * Ищет в каталоге Битрикс секцию, в которую нужно добавить товар. Если не находит, то добавляет
      * $parent_section_id - id родительской секции. Если ищем на 1-ом уровне, то $parent_section_id = null
      */
-    public function findOrInsert($name, $iblock_id, $parent_section_id = null) {
-        $section_id = $this->find($name, $iblock_id, $parent_section_id);
+    public function findOrInsert(array $sect) {
+        $find_request_section = new bitrixCatalogSection($sect);
 
-        return $section_id;
+        $section = $this->find($find_request_section);
+
+        if (is_null($section)) {//не нашёл
+            $section = $find_request_section;
+            $section->insert($section);
+
+            if ($section->isFirstLevel()) {
+                $this->first_level_sections[$section->iblock_id][$section->name] = $section;
+            }  else {
+                $this->section_tree[$section->iblock_id][$section->parent_id][$section->name] = $section;
+            }
+        }
+
+        return $section;
     }
 
 
@@ -79,17 +134,22 @@ class bitrixCatalogSection {
             $dbItems = $dbQuery->exec();
             $this->section_tree = [];
             while ($arItem = $dbItems->fetch()) {
-                $iblock_id = $arItem["IBLOCK_ID"];
-                $id = $arItem["ID"];
-                $section_name = mb_strtolower($arItem["SECTION_NAME"]);
-                $name = mb_strtolower($arItem["NAME"]);
-                $parent_id = $arItem["PARENT_ID"];
-                $parent_name = $arItem["PARENT_NAME"];
+                $section = new bitrixCatalogSection(
+                    array(
+                        "id" => $arItem["ID"],
+                        "name" => (empty($arItem["PARENT_ID"])) ? $arItem["NAME"] : $arItem["SECTION_NAME"],
+                        "parent_id" => $arItem["PARENT_ID"],
+                        "iblock_id" => $arItem["IBLOCK_ID"],
+                        "img" => null
+                    )
+                );
 
-                if (empty($parent_id))
-                    $this->first_level_sections[$iblock_id][$name] = $id;
+                //$name = $arItem["NAME"];
+
+                if ($section->isFirstLevel())
+                    $this->first_level_sections[$section->iblock_id][$section->name] = $section;
                 else
-                    $this->section_tree[$iblock_id][$parent_id][$section_name] = $id;
+                    $this->section_tree[$section->iblock_id][$section->parent_id][$section->name] = $section;
             }
     }
 }

@@ -4,15 +4,19 @@ class bitixImportItem extends dbImportItem {
     public $bitrix_catalog_id; //ид-р товара в каталоге Битрикса
     public $bitrix_price_id; //ид-р цены в каталоге Битрикса
     public $is_processed = false;
-    public $bitrix_catalog_sections; //bitrixCatalogSections
+    public $bitrix_catalog_sections; //bitrixCatalogSectionList
 
+    protected $provider_id;
     protected $prop_price_old_id;
     protected $prop_price_min_id;
+    protected $price_min;
+    protected $price_old;
     
     public function __construct(array $source) {
         $this->import_id = $source["id"];
         $this->id = $source["code"];
         //$this->product_type = $source["type_id"];
+        $this->provider_id = $source["provider_id"];
         $this->marka = $source["marka"];
         $this->model = $source["model"];
         $this->size = $source["size"];
@@ -23,17 +27,43 @@ class bitixImportItem extends dbImportItem {
         $this->img = $source["img"];
         $this->params = json_decode($source["params"], true);
         $this->is_processed = ($source["is_processed"] == 1);
+
+        $this->price_old = $this->roundPrice($this->price * 1.1);
+        $this->price_min = $this->price_opt + 100;
     }
 
 
+    /**
+     * Возвращает тип товара (product_type) по Id инфоблока
+     */
     public static function convertIBlockIdToProductTypeId($iblock_id) {
         $product_types = array(16 => 1, 19 => 2);
 
         return $product_types[$iblock_id];
     }
 
+
     /**
-    * Обновление остатков у одного товара
+     * Транслитерация. Используется для автогенерации поля CODE
+     */
+    public static function bx_translit($title) {
+        $translit_params = Array(
+            "max_len" => "200", // обрезает символьный код до 100 символов
+            "change_case" => "L", // буквы преобразуются к нижнему регистру
+            "replace_space" => "_", // меняем пробелы на нижнее подчеркивание
+            "replace_other" => "_", // меняем левые символы на нижнее подчеркивание
+            "delete_repeat_replace" => "true", // удаляем повторяющиеся нижние подчеркивания
+            "use_google" => "false", // отключаем использование google
+        );
+
+        $code = CUtil::translit($title, "ru" , $translit_params);
+
+        return $code;
+    }
+
+
+    /**
+    * Обновление остатков у товара
     */
     public function updatePriceCount() {
         if (empty($this->bitrix_catalog_id))
@@ -45,8 +75,8 @@ class bitixImportItem extends dbImportItem {
 
         //Апдейтим свойства Минимальная цена и Старая цена
         $PROP = array();
-        $PROP[$this->prop_price_old_id] = $this->roundPrice($this->price * 1.1); //Минимальная цена
-        $PROP[$this->prop_price_min_id] = $this->price_opt + 100; //Старая цена
+        $PROP[$this->prop_price_old_id] = $this->price_old;
+        $PROP[$this->prop_price_min_id] = $this->price_min;
         CIBlockElement::SetPropertyValuesEx($this->bitrix_catalog_id, false, $PROP);
 
         return true;
@@ -56,123 +86,68 @@ class bitixImportItem extends dbImportItem {
     * Добавляет товар в каталог Битрикс
     */
     public function insert() {
-        $first_level_section_id = $this->bitrix_catalog_sections->findOrInsert($this->marka, $this->iblock_id, null);
-        $parent_section_id = $this->bitrix_catalog_sections->findOrInsert($this->model, $this->iblock_id, $first_level_section_id);
+        $first_level_section = $this->bitrix_catalog_sections->findOrInsert(
+            array(
+                "name" => $this->marka,
+                "iblock_id" => $this->iblock_id,
+                "parent_id" => null
+            )
+        );
+
+        $parent_section = $this->bitrix_catalog_sections->findOrInsert(
+            array(
+                "name" => $this->marka . " " . $this->model,
+                "iblock_id" => $this->iblock_id,
+                "parent_id" => $first_level_section->id,
+                "img" => $this->img
+            )
+        );
         
-        print sprintf("%s - %d; %s - %d<br>", $this->marka, $first_level_section_id, $this->model, $parent_section_id);
-        /*
-        $this->toLog("Добавляю элемент " . $this->id);
-        // Передача основных параметров
-        $name_full = sprintf("%s %s", $this->proizvoditel, $this->name);
-
-
-        $translit_params = Array(
-            "max_len" => "200", // обрезает символьный код до 100 символов
-            "change_case" => "L", // буквы преобразуются к нижнему регистру
-            "replace_space" => "_", // меняем пробелы на нижнее подчеркивание
-            "replace_other" => "_", // меняем левые символы на нижнее подчеркивание
-            "delete_repeat_replace" => "true", // удаляем повторяющиеся нижние подчеркивания
-            "use_google" => "false", // отключаем использование google
-        ); 
-
-        $code = CUtil::translit($name_full, "ru" , $translit_params);
-
-        //$code = strtr($name_d, $converter);
-
-        // Проверка на дубли Разделов
-        $res_sect = CIBlockSection::GetList(array(), array('IBLOCK_ID' => $this->i_blockid, 'NAME' => $this->proizvoditel), false, array('ID','ACTIVE','NAME'));
-        if ($res_sect -> SelectedRowsCount() > 0) {
-            $res_sect_list = $res_sect->GetNext();
-            $res_sect_list_id = $res_sect_list['ID'];
-        } else {
-            $bs = new CIBlockSection;
-            $arFields = Array(
-                "ACTIVE" => date('d.m.Y H:i:s'),
-                "IBLOCK_SECTION_ID" => false,
-                "ACTIVE" => "Y",
-                "CODE" => CUtil::translit($this->proizvoditel, "ru" , $translit_params),
-                "IBLOCK_ID" => $this->i_blockid,
-                "NAME" => $this->proizvoditel
-            );
-            $res_sect_list = $bs->Add($arFields);
-            $res_sect_list_id = $res_sect_list;
-        }
-
-        //Проверка на дубли дочерних элементов
-        $child_cat_name = sprintf("%s %s", $this->proizvoditel, $this->categoryname);
-        $res_child_sect = CIBlockSection::GetList(array(), array('IBLOCK_ID' => $this->i_blockid, 'SECTION_ID' => $res_sect_list_id, 'NAME' => $child_cat_name), false, array('ID','ACTIVE','NAME'));
-        if ($res_child_sect -> SelectedRowsCount() > 0) {
-            $res_sect_list = $res_child_sect->GetNext();
-            $res_sect_list_id = $res_sect_list['ID'];
-        } else {
-            $bs_child = new CIBlockSection;
-            $child_sections = Array(
-                "ACTIVE" => date('d.m.Y H:i:s'),
-                "IBLOCK_SECTION_ID" => $res_sect_list_id,
-                "ACTIVE" => "Y",
-                "IBLOCK_ID" => $this->i_blockid,
-                "CODE" => CUtil::translit($this->categoryname, "ru" , $translit_params),
-                "NAME" => $child_cat_name,
-                "PREVIEW_PICTURE" => CFile::MakeFileArray($this->img_url),
-                //"DETAIL_PICTURE" => CFile::MakeFileArray($this->img_url)
-            );
-            $res_sect_list = $bs_child->Add($child_sections);
-            $res_sect_list_id = $res_sect_list;
-        }
-
-        $PROP = $this->getProps();
-
-        $arLoadProductArray = Array( 
-            "ACTIVE_FROM" => date('d.m.Y H:i:s'), // обязательно нужно указать дату начала активности элемента
-            "IBLOCK_SECTION_ID" => $res_sect_list_id, // В корне или нет
-            "IBLOCK_ID" => $this->i_blockid,              //  собственно сам id блока куда будем добавлять новый элемент
-            "NAME" => $name_full,
-            "CODE" => $code, 
-            "ACTIVE" => "Y", // активен или  N не активен 
-            "PROPERTY_VALUES" => $PROP,  // Добавим нашему элементу заданные свойства
-            "DETAIL_PICTURE" => CFile::MakeFileArray($this->img_url)  // ссылка на детальную картинку
+        $arLoadProductArray = Array(
+            "ACTIVE_FROM" => date('d.m.Y H:i:s'),
+            "IBLOCK_SECTION_ID" => $parent_section->id,
+            "IBLOCK_ID" => $this->iblock_id,
+            "NAME" => $this->full_title,
+            "CODE" => self::bx_translit($this->full_title),
+            "ACTIVE" => "Y",
+            "PROPERTY_VALUES" => $this->getProperties(),
+            //"DETAIL_PICTURE" => CFile::MakeFileArray($this->img_url)  // ссылка на детальную картинку
         ); 
 
         $el = new CIBlockElement;
-        $this->catalog_id = $el->Add($arLoadProductArray);
+        $this->bitrix_catalog_id = $el->Add($arLoadProductArray);
+        unset($el);
 
-        //$this->toLog($new_product_id);
-        //file_put_contents($file, $msg, FILE_APPEND | LOCK_EX);
+        print sprintf("%s -> %d<br>", $this->full_title, $this->bitrix_catalog_id);
 
-        //Добавляем цену 0. Нужно, чтобы потом сработала ф-я SetBasePrice
-        $PRICE_TYPE_ID = 1;
+        $this->addPrice();
+        $this->addCount();
+
+        return true;
+    }
+
+
+    protected function addPrice() {
         $arFields = Array(
-            "PRODUCT_ID" => $this->catalog_id,
-            "CATALOG_GROUP_ID" => $PRICE_TYPE_ID,
-            "PRICE" => 0,
+            "PRODUCT_ID" => $this->bitrix_catalog_id,
+            "CATALOG_GROUP_ID" => 1,
+            "PRICE" => $this->price,
             "CURRENCY" => "RUB",
             "QUANTITY_FROM" => false,
             "QUANTITY_TO" => false
         );
-        $price_id = CPrice::Add($arFields);
-        unset($el);
-        */
-        
-        return true;
-    }
-    
-    
-    /**
-    * Транслитерация. Используется для автогенерации поля CODE
-    */
-    protected function bx_translit($title) {
-        $translit_params = Array(
-            "max_len" => "200", // обрезает символьный код до 100 символов
-            "change_case" => "L", // буквы преобразуются к нижнему регистру
-            "replace_space" => "_", // меняем пробелы на нижнее подчеркивание
-            "replace_other" => "_", // меняем левые символы на нижнее подчеркивание
-            "delete_repeat_replace" => "true", // удаляем повторяющиеся нижние подчеркивания
-            "use_google" => "false", // отключаем использование google
-        ); 
 
-        $code = CUtil::translit($title, "ru" , $translit_params);    
-        
-        return $code;
+        CPrice::Add($arFields);
+    }
+
+
+    protected function addCount() {
+        $arFields = array(
+            "ID" => $this->bitrix_catalog_id,
+            "QUANTITY" => $this->count
+        );
+
+        CCatalogProduct::Add($arFields);
     }
 }
 
@@ -182,6 +157,49 @@ class bitixImportItemTyre extends bitixImportItem {
     protected $iblock_id = 16;
     protected $prop_price_old_id = 421;
     protected $prop_price_min_id = 447;
+
+    protected function getProperties() {
+        //{"width":"235","height":"65","radius":"17","index_loading":"108","index_speed":"V","thorn":0,"season":"u"}
+
+        //сезонность
+        switch($this->params["season"]) {
+            case "w": $season = 56; break;
+            case "s": $season = 55; break;
+            default: $season = 54; break;
+        }
+
+        //шипы
+        if ($this->params["season"] == "s")
+            $this->ship = null;
+        else {
+            switch($this->params["thorn"]) {
+                case 1: $ship = 58; break;
+                case 0: $ship = 57; break;
+                default: $ship = null; break;
+            }
+        }
+        $result = array(
+            127 => $this->id,
+            116 => $this->params["width"],
+            118 => $this->params["radius"],
+            117 => $this->params["height"],
+            123 => $this->params["index_loading"],
+            124 => $this->params["index_speed"],
+            121 => Array("VALUE" => $ship),
+            120 => Array("VALUE" => $season),
+            155 => "Шины легковые", //Тип автошины – Шины легковые
+            422 => "Y", //Выгружать в Яндекс.Маркет
+            130 => $this->model, //Модель автошины
+            119 => $this->marka, //Производитель
+            459 => $this->provider_id,
+            420 => Array("VALUE" => 182), //Срок доставки 1-3 дня
+            415 => Array("VALUE" => 141), //Мониторить
+            $this->prop_price_old_id => $this->price_old,
+            $this->prop_price_min_id => $this->price_min
+        );
+
+        return $result;
+    }
 }
 
 
@@ -190,5 +208,10 @@ class bitixImportItemDisc extends bitixImportItem {
     protected $iblock_id = 19;
     protected $prop_price_old_id = 454;
     protected $prop_price_min_id = 444;
+
+    protected function getProperties() {
+        //{"width":"8.5","diameter":"20","bolts_count":"10","bolts_spacing":"335","et":"163","dia":"281","color":"","type":"СТ"}
+        return array();
+    }
 }
 ?>

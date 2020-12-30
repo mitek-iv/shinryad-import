@@ -1,5 +1,6 @@
 <?php
 class bitixImport extends commonClass {
+    protected $step;
     protected $items_per_step; //количество позиций, обрабатываемых за один шаг
     protected $items = array(); //of bitixImportProduct
     protected $item_tree = array(); //items в виде дерева
@@ -8,7 +9,8 @@ class bitixImport extends commonClass {
     protected $iblock_ids = array(16, 19);
     
     
-    public function __construct($items_per_step = 2000) {
+    public function __construct(int $step, int $items_per_step = 2000) {
+        $this->step = $step;
         $this->items_per_step = $items_per_step;
         $this->bitrix_catalog_sections = new bitrixCatalogSectionList($this->iblock_ids);
         //$this->bitrix_catalog_sections->print();
@@ -34,13 +36,57 @@ class bitixImport extends commonClass {
     
     
     /**
-    * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
+    * Предварительно обнуляет остатки
+    * Пробегается по товарам из каталога битрикс и пытается найти аналогичный товар из $items
+    * Если находит, то ставит у $item->bitrix_catalog_id;
+    * Обновляет остатки у $items, у которых был найден аналог из каталога Битрикс, и ставит is_processed = true   
+    * Все прочие позиции, у которых аналог не найден, будем считать новыми. Их добавляем
+    */    
+    public function process() {
+        $this->toLog("Обработка товаров");
+        $this->getFromDB();
+        $this->getProductsFromCatalog();
+        if ($this->step == 0)
+            $this->resetCountInCatalog();
+
+        $this->findAnalogItems();
+        $this->updatePriceCount();
+        $this->insertNewProducts();
+        $this->storeProcessedItems();
+        //TODO: изменить активность у позиций, с количеством > 0
+    }
+    
+    
+    /**
+    * Пробегается по $items. Если is_processed = false
+    * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
     */
-    public function getFromDB($step = 1) {
+    protected function insertNewProducts() {
+        $this->toLog("Добавление новых товаров");
+        
+        $total = 0;
+        foreach($this->items as $item) {
+            if (empty($item->bitrix_catalog_id)) {
+                $result = $item->insert();
+                if ($result) {
+                    $item->is_processed = true;
+                    $total++;
+                }
+            }
+        }
+
+        $this->toLog("Добавил товаров: $total");
+    }
+
+
+    /**
+     * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
+     */
+    protected function getFromDB() {
         $this->toLog("Получение сжатого прайс-листа из БД");
         global $conf;
-        
-        $limit_from = (($step - 1) * $this->items_per_step);
+
+        $limit_from = (($this->step) * $this->items_per_step);
         $this->toLog("limit_from: $limit_from");
         $db = new db();
         $res = $db->query(sprintf("
@@ -50,7 +96,7 @@ class bitixImport extends commonClass {
             ORDER BY type_id, marka, model, size
             LIMIT %d, %d
         ", $limit_from, $this->items_per_step));
-        
+
         $products = [];
         $is_processed = [];
         if(!empty($res))
@@ -68,51 +114,7 @@ class bitixImport extends commonClass {
         $this->toLog("Загружено " . count($this->items));
         //printArray($this->item_tree);
     }
-    
-    
-    /**
-    * Предварительно обнуляет остатки
-    * Пробегается по товарам из каталога битрикс и пытается найти аналогичный товар из $items
-    * Если находит, то ставит у $item->bitrix_catalog_id;
-    * Обновляет остатки у $items, у которых был найден аналог из каталога Битрикс, и ставит is_processed = true   
-    * Все прочие позиции, у которых аналог не найден, будем считать новыми. Их добавляем
-    */    
-    public function process() {
-        $this->toLog("Обновление остатков у существующих товаров");
-        $this->getProductsFromCatalog();
-        $this->resetCountInCatalog();
-        $this->findAnalogItems();
-//        foreach($this->items as $item) {
-//            print sprintf("%s -> %d<br>", $item->full_title, $item->bitrix_catalog_id);
-//        }
-        //die();
-        $this->updatePriceCount();
-        $this->insertNewProducts();
-        $this->storeProcessedItems();
-    }
-    
-    
-    /**
-    * Пробегается по $items. Если is_processed = false
-    * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
-    */
-    public function insertNewProducts() {
-        $this->toLog("Добавление новых товаров");
-        
-        $total = 0;
-        foreach($this->items as $item) {
-            if (empty($item->bitrix_catalog_id)) {
-                $result = $item->insert();
-                if ($result) {
-                    $item->is_processed = true;
-                    $total++;
-                }
-            }
-        }
 
-        $this->toLog("Добавил товаров: $total");
-    }
-    
 
     /**
      * Получает список товаров из каталога
@@ -137,14 +139,14 @@ class bitixImport extends commonClass {
             //Вычисляемое поле
             ->registerRuntimeField("SIZE", [
                     "data_type" => "string",
-                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "NAME", "MODEL.NAME"],
+                    "expression" => ["TRIM(SUBSTRING(%s, CHAR_LENGTH(%s) + 1))", "NAME", "MODEL.NAME"], //["TRIM(REPLACE(%s, %s, ' '))", "NAME", "MODEL.NAME"],
                     'join_type' => "LEFT"
                 ]
             )
             //Вычисляемое поле
             ->registerRuntimeField("MODEL_NAME", [
                     "data_type" => "string",
-                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "MODEL.NAME", "PROIZV.NAME"],
+                    "expression" => ["TRIM(SUBSTRING(%s, CHAR_LENGTH(%s) + 1))", "MODEL.NAME", "PROIZV.NAME"], //["TRIM(REPLACE(%s, %s, ' '))", "MODEL.NAME", "PROIZV.NAME"],
                     'join_type' => "LEFT"
                 ]
             )
@@ -179,7 +181,7 @@ class bitixImport extends commonClass {
 
         //print "<pre>" . $dbQuery->getQuery() . "</pre>";
         $dbItems = $dbQuery->exec();
-        print "!!!" . $dbItems->getSelectedRowsCount();
+
         while ($arItem = $dbItems->fetch()) {
             //printArray($arItem);
             $this->catalog_products[] = $arItem;
@@ -216,7 +218,7 @@ class bitixImport extends commonClass {
             $model = $product["MODEL_NAME"];
             $size = $product["SIZE"];
 
-            print "$type_id - $marka - $model - $size - $product[ID]<br>";
+            //print "$type_id - $marka - $model - $size - $product[ID]<br>";
             if (isset($this->item_tree[$type_id][$marka][$model][$size])) {
                 $item = $this->item_tree[$type_id][$marka][$model][$size];
                 $item->bitrix_catalog_id = $product["ID"];

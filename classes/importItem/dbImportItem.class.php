@@ -23,15 +23,15 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
                         $provider_id,
                         $this->product_type,
                         $this->id,
-                        htmlspecialchars($this->marka, ENT_QUOTES),
-                        htmlspecialchars($this->model, ENT_QUOTES),
-                        htmlspecialchars($this->size, ENT_QUOTES),
-                        htmlspecialchars($this->full_title, ENT_QUOTES),
+                        trim(htmlspecialchars($this->marka, ENT_QUOTES)),
+                        trim(htmlspecialchars($this->model, ENT_QUOTES)),
+                        trim(htmlspecialchars($this->size, ENT_QUOTES)),
+                        trim(htmlspecialchars($this->full_title, ENT_QUOTES)),
                         $this->price_opt,
                         $this->price,
                         $this->count,
                         toJSON($this->params),
-                        htmlspecialchars($this->provider_title, ENT_QUOTES),
+                        trim(htmlspecialchars($this->provider_title, ENT_QUOTES)),
                         $this->img
                       );
     }

@@ -118,7 +118,7 @@ class bitixImportItem extends dbImportItem {
         $this->bitrix_catalog_id = $el->Add($arLoadProductArray);
         unset($el);
 
-        print sprintf("%s -> %d<br>", $this->full_title, $this->bitrix_catalog_id);
+        print sprintf("Добавил %s -> %d<br>", $this->full_title, $this->bitrix_catalog_id);
 
         $this->addPrice();
         $this->addCount();

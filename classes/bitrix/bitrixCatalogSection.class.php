@@ -114,7 +114,7 @@ class bitrixCatalogSectionList {
             //Вычисляемое поле
             ->registerRuntimeField("SECTION_NAME", [
                     "data_type" => "string",
-                    "expression" => ["TRIM(REPLACE(%s, %s, ' '))", "NAME", "PARENT.NAME"],
+                    "expression" => ["TRIM(SUBSTRING(%s, CHAR_LENGTH(%s) + 1))", "NAME", "PARENT.NAME"], //["TRIM(REPLACE(%s, %s, ' '))", "NAME", "PARENT.NAME"],
                     'join_type' => "LEFT"
                 ]
             )

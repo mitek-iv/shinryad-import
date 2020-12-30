@@ -17,9 +17,9 @@ class megaImport extends commonClass {
 
 
     public function test() {
-        $bitrixImport = new bitixImport(2000);
+        $bitrixImport = new bitixImport(0, 2000);
         //$total_step_count = $bitrixImport->getTotalStepCount();
-        $bitrixImport->getFromDB(1);
+        //$bitrixImport->getFromDB();
         $bitrixImport->process();
         //$bitrixImport->insertNewProducts();
         unset($bitrixImport);
@@ -119,11 +119,10 @@ class megaImport extends commonClass {
 
         $this->createScriptIsRunningFile();
         
-        $bitrixImport = new bitixImport(5000);
+        $bitrixImport = new bitixImport($this->step - 1,3000);
         $total_step_count = $bitrixImport->getTotalStepCount();
-        $bitrixImport->getFromDB($this->step);
+        //$bitrixImport->getFromDB();
         $bitrixImport->process();
-        //$bitrixImport->insertNewProducts();
         unset($bitrixImport);
         
         $this->deleteScriptIsRunningFile();

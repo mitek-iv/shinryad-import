@@ -28,7 +28,7 @@ class bitrixCatalogSection extends commonClass {
             "IBLOCK_SECTION_ID" => (is_null($this->parent_id)) ? false : $this->parent_id,
             "ACTIVE" => "Y",
             "IBLOCK_ID" => $this->iblock_id,
-            "CODE" => bitixImportItem::bx_translit($this->name), //CUtil::translit($this->categoryname, "ru" , $translit_params),
+            "CODE" => bitrixImportItem::bx_translit($this->name), //CUtil::translit($this->categoryname, "ru" , $translit_params),
             "NAME" => $this->name,
             "SORT" => "500",
             "PICTURE" => CFile::MakeFileArray($this->img),
@@ -36,7 +36,7 @@ class bitrixCatalogSection extends commonClass {
         );
 
         $this->id = $bs_child->Add($child_sections); //, false, false, true
-        print sprintf("Добавил категорию %d/%s; ID = %d; img = %s<br>", $this->parent_id, $this->name, $this->id, $this->img);
+        $this->toLog(sprintf("Добавил категорию %d/%s; ID = %d; img = %s", $this->parent_id, $this->name, $this->id, $this->img));
 
         return $this->id;
     }

@@ -1,8 +1,8 @@
 <?php
-class bitixImport extends commonClass {
+class bitrixImport extends commonClass {
     protected $step;
     protected $items_per_step; //количество позиций, обрабатываемых за один шаг
-    protected $items = array(); //of bitixImportProduct
+    protected $items = array(); //of bitrixImportProduct
     protected $item_tree = array(); //items в виде дерева
     protected $catalog_products = array(); //Товары, полученные из каталога битрикс
     protected $bitrix_catalog_sections; //bitrixCatalogSectionList
@@ -80,6 +80,62 @@ class bitixImport extends commonClass {
 
 
     /**
+     * Чистит инфоблок. За 1 раз удаляет одну категорию
+     */
+    public static function clearIB($iblock_id) {
+        global $DB;
+
+        $dbQuery = \Bitrix\Iblock\SectionTable::query()
+            //Подтягиваем родительскую родительской категорию
+            ->registerRuntimeField('PARENT', [
+                    'data_type' => '\Bitrix\Iblock\SectionTable',
+                    'reference' => ['=this.IBLOCK_SECTION_ID' => 'ref.ID'],
+                    'join_type' => "LEFT"
+                ]
+            )
+            //Вычисляемое поле
+            ->registerRuntimeField("SECTION_NAME", [
+                    "data_type" => "string",
+                    "expression" => ["TRIM(SUBSTRING(%s, CHAR_LENGTH(%s) + 1))", "NAME", "PARENT.NAME"], //["TRIM(REPLACE(%s, %s, ' '))", "NAME", "PARENT.NAME"],
+                    'join_type' => "LEFT"
+                ]
+            )
+            ->setSelect([
+                'ID',
+                'IBLOCK_ID',
+                'IBLOCK_SECTION_ID',
+                'NAME',
+                'SECTION_NAME',
+                'PARENT_ID' => 'PARENT.ID',
+                'PARENT_NAME' => 'PARENT.NAME'
+            ])
+            ->setFilter(['=IBLOCK_ID' => array($iblock_id), '=IBLOCK_SECTION_ID' => null])
+            ->setOrder(['IBLOCK_ID' => 'ASC', 'IBLOCK_SECTION_ID' => 'ASC', 'NAME' => 'ASC']);
+
+
+        $dbItems = $dbQuery->exec();
+        if ($dbItems->getSelectedRowsCount() <= 0) return false;
+
+        $i = 0;
+        while ($arItem = $dbItems->fetch()) {
+            toLog($arItem["ID"]);
+            $DB->StartTransaction();
+            if(!CIBlockSection::Delete($arItem["ID"])) {
+                $strWarning .= 'Error.';
+                $DB->Rollback();
+            } else {
+                $DB->Commit();
+            }
+
+            if ($i >= 0) break;
+            $i++;
+        }
+
+        return true;
+    }
+
+
+    /**
      * Получает товары с остатками по всем поставщикам, уже свёрнутые (сгруппированные) по размеру
      */
     protected function getFromDB() {
@@ -89,10 +145,12 @@ class bitixImport extends commonClass {
         $limit_from = (($this->step) * $this->items_per_step);
         $this->toLog("limit_from: $limit_from");
         $db = new db();
+
+        //WHERE is_processed = 0
         $res = $db->query(sprintf("
             SELECT * 
             FROM imp_product_compact 
-            WHERE is_processed = 0
+            WHERE 1
             ORDER BY type_id, marka, model, size
             LIMIT %d, %d
         ", $limit_from, $this->items_per_step));
@@ -102,9 +160,9 @@ class bitixImport extends commonClass {
         if(!empty($res))
             foreach($res as $item) {
                 if ($item["type_id"] == 1)
-                    $product = new bitixImportItemTyre($item);
+                    $product = new bitrixImportItemTyre($item);
                 else
-                    $product = new bitixImportItemDisc($item);
+                    $product = new bitrixImportItemDisc($item);
 
                 $product->bitrix_catalog_sections = $this->bitrix_catalog_sections;
                 $this->items[] = $product;
@@ -213,7 +271,7 @@ class bitixImport extends commonClass {
         if (empty($this->catalog_products)) return;
 
         foreach($this->catalog_products as $product) {
-            $type_id = bitixImportItem::convertIBlockIdToProductTypeId($product["IBLOCK_ID"]);
+            $type_id = bitrixImportItem::convertIBlockIdToProductTypeId($product["IBLOCK_ID"]);
             $marka = $product["MARKA"];
             $model = $product["MODEL_NAME"];
             $size = $product["SIZE"];
@@ -252,16 +310,22 @@ class bitixImport extends commonClass {
     */
     protected function storeProcessedItems() {
         $ids = [];
-        foreach($this->items as $item)
+        $not_processed_ids = [];
+        foreach($this->items as $item) {
             if ($item->is_processed)
                 $ids[] = $item->import_id;
-        
-        if (empty($ids)) return; 
+            else
+                $not_processed_ids[] = $item->import_id;
+        }
+        $this->toLog("Не обработано: " . count($not_processed_ids));
+        if (empty($ids)) return;
         
         global $conf;
-        
         $db = new db();
-        $res = $db->query(sprintf("UPDATE imp_product_compact SET `is_processed` = '1' WHERE `code` IN (%s)", implode(", ", $ids)));
+        $query = sprintf("UPDATE imp_product_compact SET `is_processed` = '1' WHERE `id` IN (%s)", implode(", ", $ids));
+        //$this->toLog($query);
+
+        $res = $db->query($query);
         unset($db);
     }
 }

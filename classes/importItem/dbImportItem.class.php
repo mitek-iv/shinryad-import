@@ -23,15 +23,15 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
                         $provider_id,
                         $this->product_type,
                         $this->id,
-                        trim(htmlspecialchars($this->marka, ENT_QUOTES)),
-                        trim(htmlspecialchars($this->model, ENT_QUOTES)),
-                        trim(htmlspecialchars($this->size, ENT_QUOTES)),
-                        trim(htmlspecialchars($this->full_title, ENT_QUOTES)),
+                        $this->flt_var($this->marka),
+                        $this->flt_var($this->model),
+                        $this->flt_var($this->size),
+                        $this->flt_var($this->full_title),
                         $this->price_opt,
                         $this->price,
                         $this->count,
                         toJSON($this->params),
-                        trim(htmlspecialchars($this->provider_title, ENT_QUOTES)),
+                        $this->flt_var($this->provider_title),
                         $this->img
                       );
     }
@@ -51,11 +51,19 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
     protected function getFullTitle() {
         $this->full_title = sprintf("%s %s %s", $this->marka, $this->model, $this->size);
     }
-    
-    
+
+
     /**
-    *
-    * Первое слово модели приводим к виду Xxxxxxxx
+     * Готовит строку к вставке в БД
+     */
+    protected function flt_var($var) {
+        //return trim(htmlspecialchars($var, ENT_QUOTES)),
+        return trim(filter_var($var, FILTER_SANITIZE_MAGIC_QUOTES));
+    }
+
+
+    /**
+     * Первое слово модели приводим к виду Xxxxxxxx
     */
     protected function normalizeModel($marka, $model) {
         if ($marka == "Continental")

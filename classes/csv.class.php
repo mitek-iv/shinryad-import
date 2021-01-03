@@ -79,8 +79,8 @@ class CSVWriter {
     }
     
     
-    public function get() {
-        $this->set_csv();
+    public function get($to_utf8 = true) {
+        $this->set_csv($to_utf8);
         $this->close();
     }
     
@@ -103,11 +103,14 @@ class CSVWriter {
     }
     
     
-    private function set_csv() { 
+    private function set_csv($to_utf8) { 
         if($this->is_writable()) {
           $content = ""; 
           foreach($this->array as $ar) { 
-             $content .= implode($this->delimiter, $ar); //iconv("utf-8", "cp1251", implode($this->delimiter, $ar));  
+		if ($to_utf8)
+	        	$content .= implode($this->delimiter, $ar);
+		else
+			$content .= iconv("utf-8", "cp1251", implode($this->delimiter, $ar));  
              $content .= "\r\n"; 
           } 
           if (fwrite($this->handle, $content) === false) exit;

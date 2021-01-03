@@ -1,5 +1,5 @@
 <?php
-class bitixImportItem extends dbImportItem {
+class bitrixImportItem extends dbImportItem {
     public $import_id; //ид-р строки в таблице импорта (imp_product_compact)
     public $bitrix_catalog_id; //ид-р товара в каталоге Битрикса
     public $bitrix_price_id; //ид-р цены в каталоге Битрикса
@@ -70,8 +70,13 @@ class bitixImportItem extends dbImportItem {
             return false;
 
         //printArray($this);
-        $dbResult = \Bitrix\Catalog\ProductTable::update($this->bitrix_catalog_id, ["QUANTITY" => $this->count]);
-        $dbResult = \Bitrix\Catalog\PriceTable::update($this->bitrix_price_id, ["PRICE" => $this->price]);
+        try {
+            $dbResult = \Bitrix\Catalog\ProductTable::update($this->bitrix_catalog_id, ["QUANTITY" => $this->count]);
+            $dbResult = \Bitrix\Catalog\PriceTable::update($this->bitrix_price_id, ["PRICE" => $this->price]);
+        } catch (Exception $e) {
+            $this->toLog("!!!Не смог обновить остатки bitrix_catalog_id = " . $this->bitrix_catalog_id);
+            //die();
+        }
 
         //Апдейтим свойства Минимальная цена и Старая цена
         $PROP = array();
@@ -111,14 +116,16 @@ class bitixImportItem extends dbImportItem {
             "CODE" => self::bx_translit($this->full_title),
             "ACTIVE" => "Y",
             "PROPERTY_VALUES" => $this->getProperties(),
-            //"DETAIL_PICTURE" => CFile::MakeFileArray($this->img_url)  // ссылка на детальную картинку
-        ); 
+        );
+
+        if ($this->product_type == 2) //Для дисков будем добавлять детальную картинку
+            $arLoadProductArray["DETAIL_PICTURE"] = CFile::MakeFileArray($this->img_url);
 
         $el = new CIBlockElement;
         $this->bitrix_catalog_id = $el->Add($arLoadProductArray);
         unset($el);
 
-        print sprintf("Добавил %s -> %d<br>", $this->full_title, $this->bitrix_catalog_id);
+        $this->toLog(sprintf("Добавил %s -> %d<br>", $this->full_title, $this->bitrix_catalog_id));
 
         $this->addPrice();
         $this->addCount();
@@ -152,7 +159,7 @@ class bitixImportItem extends dbImportItem {
 }
 
 
-class bitixImportItemTyre extends bitixImportItem {
+class bitrixImportItemTyre extends bitrixImportItem {
     protected $product_type = 1;
     protected $iblock_id = 16;
     protected $prop_price_old_id = 421;
@@ -203,7 +210,7 @@ class bitixImportItemTyre extends bitixImportItem {
 }
 
 
-class bitixImportItemDisc extends bitixImportItem {
+class bitrixImportItemDisc extends bitrixImportItem {
     protected $product_type = 2;
     protected $iblock_id = 19;
     protected $prop_price_old_id = 454;
@@ -211,7 +218,27 @@ class bitixImportItemDisc extends bitixImportItem {
 
     protected function getProperties() {
         //{"width":"8.5","diameter":"20","bolts_count":"10","bolts_spacing":"335","et":"163","dia":"281","color":"","type":"СТ"}
-        return array();
+        $result = array(
+            243 => $this->id,
+            229 => $this->params["width"],
+            230 => $this->params["diameter"],
+            231 => $this->params["bolts_count"],
+            232 => $this->params["bolts_spacing"],
+            234 => $this->params["dia"],
+            267 => $this->params["color"],
+            233 => $this->params["et"],
+            458 => $this->provider_id,
+            432 => Array("VALUE" => 183), //Срок доставки 1-3 дня
+            253 => $this->params["type"], //материал
+            266 => $this->marka, //Производитель
+            256 => $this->model, //Модель диска
+            424 => "Y", //Выгружать в Яндекс.Маркет
+            423 => Array("VALUE" => 145), //Мониторит
+            $this->prop_price_old_id => $this->price_old,
+            $this->prop_price_min_id => $this->price_min
+        );
+
+        return $result;
     }
 }
 ?>

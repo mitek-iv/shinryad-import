@@ -65,8 +65,8 @@ class dbImport4KolesaDarom extends dbImport {
             $product["img"] = "";
             $this->products[$product["id"]] = $product;
         }
-        //!
-        
+
+        //!Получение изображений
         //$this->get_images_for_products();
         //printArray($this->products);
         

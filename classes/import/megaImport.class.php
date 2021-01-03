@@ -16,8 +16,64 @@ class megaImport extends commonClass {
     }
 
 
-    public function test() {
-        $bitrixImport = new bitixImport(0, 2000);
+    public function process($mode) {
+        switch ($mode) {
+            case "price":
+                $this->preparePrice();
+                break;
+            case "export":
+                $this->exportPriceToBitrixCatalog();
+                break;
+            case "menu":
+                $this->printMenu();
+                break;
+            case "test":
+                $this->test();
+                break;
+            case "clear":
+                $this->clearIB();
+                break;
+            case "get_csv":
+                $this->getCSV();
+                break;
+        }
+    }
+
+
+    protected function getCSV() {
+        global $conf;
+
+        $db = new db();
+
+        $res = $db->query("
+            SELECT `id`, `provider_id`, `type_id`, `code`, `marka`, `model`, `size`, `full_title`, `provider_title`, `price_opt`, `price`, `count`, `params`, `img`, `is_processed`
+            FROM imp_product_compact 
+            WHERE 1
+            ORDER BY type_id, marka, model, size
+        ");
+
+        $csv = new CSVWriter("imp_product_compact.csv");
+        $header = array("id", "provider_id", "type_id", "code", "marka", "model", "size", "full_title", "provider_title", "price_opt", "price", "count", "params", "img", "is_processed");
+        $csv->add($header);
+        foreach($res as $item) {
+            //$item["marka"] = htmlspecialchars_decode($item["marka"], ENT_QUOTES);
+            //$item["model"] = htmlspecialchars_decode($item["model"], ENT_QUOTES);
+            //$item["size"] = htmlspecialchars_decode($item["size"], ENT_QUOTES);
+            //$item["full_title"] = htmlspecialchars_decode($item["full_title"], ENT_QUOTES);
+            //$item["provider_title"] = htmlspecialchars_decode($item["provider_title"], ENT_QUOTES);
+            //printArray($item);
+            $csv->add($item);
+        }
+        $csv->get(false);
+        unset($csv);
+        unset($db);
+
+        print "<a href='imp_product_compact.csv' target='_blank'>Скачать файл</a>";
+    }
+
+
+    protected function test() {
+        $bitrixImport = new bitrixImport(4, 3000);
         //$total_step_count = $bitrixImport->getTotalStepCount();
         //$bitrixImport->getFromDB();
         $bitrixImport->process();
@@ -26,10 +82,29 @@ class megaImport extends commonClass {
     }
 
 
-    public function printMenu() {
+    protected function clearIB() {
+        print "Пока отключил эту функцию";
+        die();
+
+        if ($this->step > 10) {
+            print "ok";
+            return;
+        }
+        $res = bitrixImport::clearIB(19);
+        if ($res) {
+            $url = $this->getNextStepUrl(null, $this->step + 1);
+            $this->goURL($url);
+        }
+    }
+
+
+
+    protected function printMenu() {
         $url_price = $this->getNextStepUrl("price");
         $url_export = $this->getNextStepUrl("export");
         $url_test = $this->getNextStepUrl("test");
+        $url_clear = $this->getNextStepUrl("clear");
+        $url_get_csv = $this->getNextStepUrl("get_csv");
 
         $result = "
             <h3>НОВЫЙ импорт</h3>
@@ -48,13 +123,15 @@ class megaImport extends commonClass {
             </style>
             <a href='$url_price' class='button'>Сформировать консолидированный прайс</a>
             <a href='$url_export' class='button'>Выгрузить прайс в каталог сайта</a>
-            <a href='$url_test' class='button'>Test</a>";
+            <a href='$url_test' class='button'>Test</a>
+            <a href='$url_get_csv' class='button'>CSV</a>
+            <!--<a href='$url_clear' class='button'>Clear</a>-->";
 
         print $result;
     }
-    
 
-    public function preparePrice() {
+
+    protected function preparePrice() {
         if ($this->checkScriptIsRunning())
             die();
 
@@ -102,9 +179,9 @@ class megaImport extends commonClass {
             $this->goURL($url);
         }
     }
-    
-    
-    public function exportPriceToBitrixCatalog() {
+
+
+    protected function exportPriceToBitrixCatalog() {
         if ($this->checkScriptIsRunning())
             die();
         
@@ -119,7 +196,7 @@ class megaImport extends commonClass {
 
         $this->createScriptIsRunningFile();
         
-        $bitrixImport = new bitixImport($this->step - 1,3000);
+        $bitrixImport = new bitrixImport($this->step - 1,3000);
         $total_step_count = $bitrixImport->getTotalStepCount();
         //$bitrixImport->getFromDB();
         $bitrixImport->process();

@@ -43,7 +43,7 @@ class bitrixCatalogSection extends commonClass {
 }
 
 
-class bitrixCatalogSectionList {
+class bitrixCatalogSectionList extends commonClass {
     protected $iblock_ids = array();
     protected $first_level_sections = array();
     protected $section_tree = array();
@@ -51,7 +51,7 @@ class bitrixCatalogSectionList {
 
     public function __construct(array $iblock_ids) {
         $this->iblock_ids = $iblock_ids;
-        $this->get();
+        //$this->get();
     }
 
 
@@ -62,19 +62,62 @@ class bitrixCatalogSectionList {
         print "</pre>";
     }
 
-
-    public function find(bitrixCatalogSection $section) {
+    /**
+     * Depricated
+     */
+    public function find2(bitrixCatalogSection $section) {
         if ($section->isFirstLevel()) {//1-ый уровень
             if (isset($this->first_level_sections[$section->iblock_id][$section->name]))
                 return $this->first_level_sections[$section->iblock_id][$section->name];
-            else
+            else {
+                $this->toLog(sprintf("Не нашёл категорию 1-го уровня !%s!", $section->name));
                 return null;
+            }
         } else {//2-ой уровень
             if (isset($this->section_tree[$section->iblock_id][$section->parent_id][$section->name]))
                 return $this->section_tree[$section->iblock_id][$section->parent_id][$section->name];
-            else
+            else {
+                $this->toLog(sprintf("Не нашёл категорию !%s! в родительской #%d", $section->name, $section->parent_id));
                 return null;
+            }
         }
+    }
+
+
+    public function find(bitrixCatalogSection $section) {
+        if ($section->isFirstLevel()) {
+            $filter = ['=IBLOCK_ID' => $this->iblock_ids, '=UPPER_NAME' => mb_strtoupper($section->name), '==IBLOCK_SECTION_ID' => null];
+            $warning_not_found = sprintf("Не нашёл категорию 1-го уровня |%s|", $section->name);
+        } else {
+            $filter = ['=IBLOCK_ID' => $this->iblock_ids, '=UPPER_NAME' => mb_strtoupper($section->name), '=IBLOCK_SECTION_ID' => $section->parent_id];
+            $warning_not_found = sprintf("Не нашёл категорию |%s| в родительской #%d", $section->name, $section->parent_id);
+        }
+
+        $dbQuery = \Bitrix\Iblock\SectionTable::query()
+            ->registerRuntimeField("UPPER_NAME", [
+                    "data_type" => "string",
+                    "expression" => ["UPPER(%s)", "NAME"], //["TRIM(REPLACE(%s, %s, ' '))", "NAME", "PARENT.NAME"],
+                ]
+            )
+            ->setSelect([
+                'ID',
+            ])
+            ->setFilter($filter);
+
+        $dbItems = $dbQuery->exec();
+
+        //print "<pre>" . $dbQuery->getQuery() . "</pre>";
+
+        if ($dbItems->getSelectedRowsCount() <= 0) {
+            $this->toLog($warning_not_found);
+
+            return null;
+        }
+
+        $arItem = $dbItems->fetch();
+        $section->id = $arItem["ID"];
+
+        return $section;
     }
 
 
@@ -101,7 +144,9 @@ class bitrixCatalogSectionList {
         return $section;
     }
 
-
+    /**
+     * Depricated
+     */
     protected function get() {
         $dbQuery = \Bitrix\Iblock\SectionTable::query()
             //Подтягиваем родительскую родительской категорию

@@ -2,6 +2,7 @@
 class bitrixImport extends commonClass {
     protected $step;
     protected $items_per_step; //количество позиций, обрабатываемых за один шаг
+    protected $total_step_count = 0;
     protected $items = array(); //of bitrixImportProduct
     protected $item_tree = array(); //items в виде дерева
     protected $catalog_products = array(); //Товары, полученные из каталога битрикс
@@ -29,9 +30,10 @@ class bitrixImport extends commonClass {
             WHERE 1 
         ");    
         
-        $total_step_count = ceil($rc / $this->items_per_step);
-        $this->toLog("Всего позиций: $rc; Требуется шагов: $total_step_count");
-        return $total_step_count;
+        $this->total_step_count = ceil($rc / $this->items_per_step);
+        $this->toLog("Всего позиций: $rc; Требуется шагов: $this->total_step_count");
+
+        return $this->total_step_count;
     }
     
     
@@ -53,7 +55,9 @@ class bitrixImport extends commonClass {
         $this->updatePriceCount();
         $this->insertNewProducts();
         $this->storeProcessedItems();
-        //TODO: изменить активность у позиций, с количеством > 0
+
+        if ($this->step == $this->total_step_count)
+            $this->updateActivity();
     }
     
     
@@ -166,7 +170,14 @@ class bitrixImport extends commonClass {
 
                 $product->bitrix_catalog_sections = $this->bitrix_catalog_sections;
                 $this->items[] = $product;
-                $this->item_tree[$item["type_id"]][$item["marka"]][$item["model"]][$item["size"]] = $product;
+
+
+                $type_id = $item["type_id"];
+                $marka = mb_strtoupper($item["marka"]);
+                $model = mb_strtoupper($item["model"]);
+                $size = mb_strtoupper($item["size"]);
+
+                $this->item_tree[$type_id][$marka][$model][$size] = $product;
             }
 
         $this->toLog("Загружено " . count($this->items));
@@ -258,8 +269,10 @@ class bitrixImport extends commonClass {
         foreach($this->catalog_products as $item)
             $ids[] = $item["ID"];
 
-        if (!empty($ids))
-            $dbResult = \Bitrix\Catalog\ProductTable::updateMulti($ids, ["QUANTITY" => 0]);
+        if (!empty($ids)) {
+            $dbResult = Bitrix\Catalog\ProductTable::updateMulti($ids, ["QUANTITY" => 0]);
+            $dbResult = Bitrix\Iblock\ElementTable::updateMulti($ids, ["ACTIVE" => 'N']);
+        }
     }
 
     
@@ -272,9 +285,9 @@ class bitrixImport extends commonClass {
 
         foreach($this->catalog_products as $product) {
             $type_id = bitrixImportItem::convertIBlockIdToProductTypeId($product["IBLOCK_ID"]);
-            $marka = $product["MARKA"];
-            $model = $product["MODEL_NAME"];
-            $size = $product["SIZE"];
+            $marka = mb_strtoupper($product["MARKA"]);
+            $model = mb_strtoupper($product["MODEL_NAME"]);
+            $size = mb_strtoupper($product["SIZE"]);
 
             //print "$type_id - $marka - $model - $size - $product[ID]<br>";
             if (isset($this->item_tree[$type_id][$marka][$model][$size])) {
@@ -327,6 +340,39 @@ class bitrixImport extends commonClass {
 
         $res = $db->query($query);
         unset($db);
+    }
+
+
+    /**
+     * Выставляет активность у товаров, кол-во которых > 0
+     */
+    public function updateActivity() {
+        $this->toLog("Обновление активности ненулевых позиций");
+
+        $dbQuery = Bitrix\Iblock\ElementTable::query()
+            ->registerRuntimeField("PRODUCT", [
+                    'data_type' => '\Bitrix\Catalog\ProductTable',
+                    'reference' => array('=this.ID' => 'ref.ID'),
+                ]
+            )
+            ->setSelect([
+                'ID', 'NAME', 'ACTIVE', 'PRODUCT.QUANTITY'
+            ])
+            ->setFilter(['=IBLOCK_ID' => $this->iblock_ids, '>PRODUCT.QUANTITY' => 0, 'ACTIVE' => 'N'])
+            //->setOrder(['IBLOCK_ID' => 'ASC', 'IBLOCK_SECTION_ID' => 'ASC', 'NAME' => 'ASC']);
+        ;
+
+        //print "<pre>" . $dbQuery->getQuery() . "</pre>";
+        $dbItems = $dbQuery->exec();
+
+        $ids = [];
+        while ($arItem = $dbItems->fetch()) {
+            //printArray($arItem);
+            $ids[] = $arItem["ID"];
+        }
+
+        if (!empty($ids))
+            $dbResult = Bitrix\Iblock\ElementTable::updateMulti($ids, ["ACTIVE" => 'Y']);
     }
 }
 ?>

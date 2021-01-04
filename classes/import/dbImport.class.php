@@ -68,10 +68,10 @@ class dbImport extends commonClass {
                     SELECT P1.id, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`
                     FROM imp_product_full P1
                     INNER JOIN (
-                        SELECT `type_id`, `marka`, `model`, `size`, MIN(price) as min_price, COUNT(*) as cnt
+                        SELECT `type_id`, MAX(`marka`) as `marka`, MAX(`model`) as `model`, MAX(`size`) as `size`, MIN(price) as min_price, COUNT(*) as cnt
                         FROM `imp_product_full`
                         WHERE 1
-                        GROUP BY `type_id`, `marka`, `model`, `size`
+                        GROUP BY `type_id`, UPPER(`marka`), UPPER(`model`), UPPER(`size`)
                     ) P2
                     ON (P1.`type_id` = P2.`type_id`) AND (P1.`marka` = P2.`marka`) AND (P1.`model` = P2.`model`) AND (P1.`size` = P2.`size`) AND (P1.`price` = P2.`min_price`)
                 ) P3
@@ -79,7 +79,7 @@ class dbImport extends commonClass {
                 GROUP BY  `type_id`, `marka`, `model`, `size`, `price`
             )
         ");
-        
+
         unset($db);
     }
     

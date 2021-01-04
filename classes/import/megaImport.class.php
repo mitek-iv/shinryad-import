@@ -73,12 +73,33 @@ class megaImport extends commonClass {
 
 
     protected function test() {
+        //Bridgestone Blizzak DM V2
+        $bitrix_catalog_sections = new bitrixCatalogSectionList(array(16, 19));
+        $first_level_section =$bitrix_catalog_sections->findOrInsert(
+            array(
+                "name" => "Bridgestone",
+                "iblock_id" => 16,
+                "parent_id" => null
+            )
+        );
+
+        print "1st: " . $first_level_section . "<br>";
+
+        $parent_section = $bitrix_catalog_sections->findOrInsert(
+            array(
+                "name" => "Bridgestone BLIZZAK Dm v2",
+                "iblock_id" => 16,
+                "parent_id" => $first_level_section->id,
+                "img" => $this->img
+            )
+        );
+        print "2nd: " . $parent_section . "<br>";
+        /*
         $bitrixImport = new bitrixImport(4, 3000);
-        //$total_step_count = $bitrixImport->getTotalStepCount();
-        //$bitrixImport->getFromDB();
-        $bitrixImport->process();
-        //$bitrixImport->insertNewProducts();
+        $bitrixImport->updateActivity();
+        //$bitrixImport->process();
         unset($bitrixImport);
+        */
     }
 
 

@@ -5,6 +5,7 @@ class bitrixCatalogSection extends commonClass {
     public $parent_id;
     public $iblock_id;
     public $img;
+    public $is_active;
 
 
     public function __construct(array $source) {
@@ -37,6 +38,7 @@ class bitrixCatalogSection extends commonClass {
 
         $this->id = $bs_child->Add($child_sections); //, false, false, true
         $this->toLog(sprintf("Добавил категорию %d/%s; ID = %d; img = %s", $this->parent_id, $this->name, $this->id, $this->img));
+        $this->is_active = true;
 
         return $this->id;
     }
@@ -100,7 +102,7 @@ class bitrixCatalogSectionList extends commonClass {
                 ]
             )
             ->setSelect([
-                'ID',
+                'ID', 'ACTIVE'
             ])
             ->setFilter($filter);
 
@@ -116,6 +118,7 @@ class bitrixCatalogSectionList extends commonClass {
 
         $arItem = $dbItems->fetch();
         $section->id = $arItem["ID"];
+        $section->is_active = ($arItem["ACTIVE"] == 'Y');
 
         return $section;
     }

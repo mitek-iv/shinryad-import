@@ -65,22 +65,27 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
     /**
      * Первое слово модели приводим к виду Xxxxxxxx
     */
-    protected function normalizeModel($marka, $model) {
-        if ($marka == "Continental")
-            return $model;
+    protected function normalizeMarkaModel() {
+        $this->marka = trim(str_replace("  ", " ", $this->marka));
+        $this->model = trim(str_replace("  ", " ", $this->model));
+
+        if ($this->marka == "Continental")
+            return;
         
-        $mdl = explode(" ", $model);
+        $mdl = explode(" ", $this->model);
         if (strpos($mdl[0], "-") !== false) {
             $mdl_parts = explode("-", $mdl[0]);  
             foreach($mdl_parts as &$part) {
-                $part = mb_convert_case($part, MB_CASE_TITLE);
+                if (strlen($part > 2))
+                    $part = mb_convert_case($part, MB_CASE_TITLE);
             }
             $mdl[0] = implode("-", $mdl_parts);
         } else {
-            $mdl[0] = mb_convert_case($mdl[0], MB_CASE_TITLE);
+            if (strlen($mdl[0]) > 2)
+                $mdl[0] = mb_convert_case($mdl[0], MB_CASE_TITLE);
         }
         
-        return implode(" ", $mdl);
+        $this->model = implode(" ", $mdl);
     }
 }
 ?>

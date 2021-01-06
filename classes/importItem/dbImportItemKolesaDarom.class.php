@@ -3,17 +3,9 @@ class dbImportItemKolesaDarom extends dbImportItem {
     function __construct(array $item) {
         $this->id = $item["id"];
         $this->marka = $item["maker"];
-        $this->model = $this->normalizeModel($this->marka, $item["categoryname"]);
-        
-        if ($this->marka == "Continental") { //Conti Cross Contact LX2 => ContiCrossContact LX2
-            $m_part = explode(" ", $this->model);
-            if (count($m_part) > 1) {
-                $m_last = $m_part[count($m_part) - 1];
-                unset($m_part[count($m_part) - 1]);
-                $this->model = implode("", $m_part) . " " . $m_last;
-            }
-        }
-        
+        $this->model = $item["categoryname"];
+        $this->normalizeMarkaModel();
+
         $this->img = $item["img"];
         $this->provider_title = $item["name"];
         
@@ -58,6 +50,7 @@ class dbImportItemKolesaDaromTyre extends dbImportItemKolesaDarom {
         //printArray($name_part);
         $this->size = implode(" ", $name_part);
         $this->size = str_replace(",", ".", $this->size);
+        $this->size = str_replace("  ", " ", $this->size);
         $this->size = trim($this->size);
     }
     
@@ -75,13 +68,24 @@ class dbImportItemKolesaDaromTyre extends dbImportItemKolesaDarom {
     }
     
     
-    protected function normalizeModel($marka, $model) {
-        if ($marka == "BF Goodrich") {//Nokian H-8 => Nokian Hakkapeliitta 8
-            $model = str_replace("G Grip", "G-Grip ", $model);
-            $model = str_replace("G Force", "G-Force ", $model);
+    protected function normalizeMarkaModel() {
+        parent::normalizeMarkaModel();
+
+        switch($this->marka) {
+            case "BF Goodrich": //BF Goodrich => BFGoodrich
+                $this->marka = "BFGoodrich";
+                $this->model = str_replace("G Grip", "G-Grip", $this->model);
+                $this->model = str_replace("G Force", "G-Force", $this->model);
+                break;
+            case "Continental": //Conti Cross Contact LX2 => ContiCrossContact LX2
+                $m_part = explode(" ", $this->model);
+                if (count($m_part) > 1) {
+                    $m_last = $m_part[count($m_part) - 1];
+                    unset($m_part[count($m_part) - 1]);
+                    $this->model = implode("", $m_part) . " " . $m_last;
+                }
+                break;
         }
-        
-        return parent::normalizeModel($marka, $model);
     }
 }
 
@@ -103,6 +107,8 @@ class dbImportItemKolesaDaromDisc extends dbImportItemKolesaDarom {
         //printArray($name_part);
         $this->size = implode(" ", $name_part);
         $this->size = str_replace(",", ".", $this->size);
+        $this->size = str_replace("  ", " ", $this->size);
+        $this->size = trim($this->size);
     }
     
     

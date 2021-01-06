@@ -3,7 +3,8 @@ class bitrixImportItem extends dbImportItem {
     public $import_id; //ид-р строки в таблице импорта (imp_product_compact)
     public $bitrix_catalog_id; //ид-р товара в каталоге Битрикса
     public $bitrix_price_id; //ид-р цены в каталоге Битрикса
-    public $is_processed = false;
+    public $is_processed = false; //флаг того, что соответствующий элемент был обновлён/добавлен в каталоге Битрикс
+    public $allow_processing = true; //флаг того, что необходимо обрабатывать текущий элемент
     public $bitrix_catalog_sections; //bitrixCatalogSectionList
 
     protected $provider_id;
@@ -26,7 +27,7 @@ class bitrixImportItem extends dbImportItem {
         $this->count = $source["count"];
         $this->img = $source["img"];
         $this->params = json_decode($source["params"], true);
-        $this->is_processed = ($source["is_processed"] == 1);
+        //$this->is_processed = ($source["is_processed"] == 1);
 
         $this->price_old = $this->roundPrice($this->price * 1.1);
         $this->price_min = $this->price_opt + 100;
@@ -75,7 +76,8 @@ class bitrixImportItem extends dbImportItem {
             $dbResult = \Bitrix\Catalog\PriceTable::update($this->bitrix_price_id, ["PRICE" => $this->price]);
         } catch (Exception $e) {
             $this->toLog("!!!Не смог обновить остатки bitrix_catalog_id = " . $this->bitrix_catalog_id);
-            //die();
+
+            return false;
         }
 
         //Апдейтим свойства Минимальная цена и Старая цена
@@ -107,8 +109,15 @@ class bitrixImportItem extends dbImportItem {
                 "img" => $this->img
             )
         );
-        
-        $arLoadProductArray = Array(
+
+
+        if (!($parent_section->is_active)) {
+            $this->toLog(sprintf(sprintf("НЕ добавил %s. Неактивная категория %d", $this->full_title, $parent_section->id)));
+            return false;
+        }
+
+
+        $arLoadProductArray = array(
             "ACTIVE_FROM" => date('d.m.Y H:i:s'),
             "IBLOCK_SECTION_ID" => $parent_section->id,
             "IBLOCK_ID" => $this->iblock_id,
@@ -118,14 +127,16 @@ class bitrixImportItem extends dbImportItem {
             "PROPERTY_VALUES" => $this->getProperties(),
         );
 
-        if ($this->product_type == 2) //Для дисков будем добавлять детальную картинку
-            $arLoadProductArray["DETAIL_PICTURE"] = CFile::MakeFileArray($this->img_url);
+        if ($this->product_type == 2) { //Для дисков будем добавлять детальную картинку
+            //$this->toLog("!добавляю картинку " . $this->img);
+            $arLoadProductArray["DETAIL_PICTURE"] = CFile::MakeFileArray($this->img);
+        }
 
         $el = new CIBlockElement;
         $this->bitrix_catalog_id = $el->Add($arLoadProductArray);
         unset($el);
 
-        $this->toLog(sprintf("Добавил %s -> %d<br>", $this->full_title, $this->bitrix_catalog_id));
+        $this->toLog(sprintf("Добавил %s -> %d", $this->full_title, $this->bitrix_catalog_id));
 
         $this->addPrice();
         $this->addCount();

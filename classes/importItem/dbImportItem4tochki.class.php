@@ -3,7 +3,8 @@ class dbImportItem4tochki extends dbImportItem {
     function __construct(stdClass $item) {
         $this->id = $item->code;
         $this->marka = $item->marka;
-        $this->model = $this->normalizeModel($this->marka, $item->model);
+        $this->model = $item->model;
+        $this->normalizeMarkaModel();
         $this->img = $item->img_big_my;
         
         $this->getPriceCount($item->whpr->wh_price_rest); //Обработкацены и количества
@@ -120,6 +121,8 @@ class dbImportItem4tochkiTyre extends dbImportItem4tochki {
          }
         
          $this->size = str_replace("x", "/", $this->size);
+         $this->size = str_replace("  ", " ", $this->size);
+
          $this->size = rtrim($this->size);
      }
 }

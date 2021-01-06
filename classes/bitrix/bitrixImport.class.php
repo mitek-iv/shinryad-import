@@ -56,30 +56,33 @@ class bitrixImport extends commonClass {
         $this->insertNewProducts();
         $this->storeProcessedItems();
 
-        if ($this->step == $this->total_step_count)
+        if ($this->step == $this->total_step_count - 1)
             $this->updateActivity();
     }
     
     
     /**
-    * Пробегается по $items. Если is_processed = false
+    * Пробегается по $items. Если bitrix_catalog_id не установлен,
     * Значит считаем, что товар - новый. Добавляем его в каталог Битрикс
     */
     protected function insertNewProducts() {
         $this->toLog("Добавление новых товаров");
         
         $total = 0;
+        $total_not_processed = 0;
         foreach($this->items as $item) {
             if (empty($item->bitrix_catalog_id)) {
                 $result = $item->insert();
                 if ($result) {
                     $item->is_processed = true;
                     $total++;
+                } else {
+                    $total_not_processed++;
                 }
             }
         }
 
-        $this->toLog("Добавил товаров: $total");
+        $this->toLog("Добавил товаров: $total, Не добавил: $total_not_processed");
     }
 
 
@@ -159,8 +162,8 @@ class bitrixImport extends commonClass {
             LIMIT %d, %d
         ", $limit_from, $this->items_per_step));
 
-        $products = [];
-        $is_processed = [];
+        //$products = [];
+        //$is_processed = [];
         if(!empty($res))
             foreach($res as $item) {
                 if ($item["type_id"] == 1)
@@ -187,8 +190,9 @@ class bitrixImport extends commonClass {
 
     /**
      * Получает список товаров из каталога
+     * Если родительская категория неактивна, то такой элемент в выборке появляется, но в обработке не участвует
      */
-    protected function getProductsFromCatalog() {
+    public function getProductsFromCatalog() {
         $dbQuery = Bitrix\Iblock\ElementTable::query()
             //Подтягиваем родительскую категорию
             //Для подключения возможности джойна свойств элементов необходимо подключить файл include(elementproperty.php) в init.php
@@ -242,9 +246,10 @@ class bitrixImport extends commonClass {
                 'QUANTITY' => 'PRODUCT.QUANTITY',
                 'PRICE_ID' => 'PRICE.ID',
                 'PRICE_VALUE' => 'PRICE.PRICE',
+                'PROCESS' => 'MODEL.ACTIVE'
             ])
             ->setFilter(['=IBLOCK_ID' => $this->iblock_ids])
-            //->setLimit(1000)
+            //->setLimit(1000) //!!!
             ->setOrder(['ID' => 'ASC']);
             //->setSelect(['*'])
 
@@ -252,14 +257,15 @@ class bitrixImport extends commonClass {
         $dbItems = $dbQuery->exec();
 
         while ($arItem = $dbItems->fetch()) {
-            //printArray($arItem);
+            $arItem["PROCESS"] = ($arItem["PROCESS"] == 'Y');
+            // printArray($arItem); //!!!
             $this->catalog_products[] = $arItem;
         }
     }
 
     
     /**
-     * Обнуляет остатки во всём каталоге
+     * Обнуляет остатки во всём каталоге. Товары в неактивных секциях не обрабатываем.
      */
     protected function resetCountInCatalog() {
         $this->toLog("Обнуляем остатков у всех товаров в каталоге");
@@ -267,7 +273,9 @@ class bitrixImport extends commonClass {
 
         $ids = [];
         foreach($this->catalog_products as $item)
-            $ids[] = $item["ID"];
+            if ($item["PROCESS"])
+                $ids[] = $item["ID"];
+
 
         if (!empty($ids)) {
             $dbResult = Bitrix\Catalog\ProductTable::updateMulti($ids, ["QUANTITY" => 0]);
@@ -292,6 +300,7 @@ class bitrixImport extends commonClass {
             //print "$type_id - $marka - $model - $size - $product[ID]<br>";
             if (isset($this->item_tree[$type_id][$marka][$model][$size])) {
                 $item = $this->item_tree[$type_id][$marka][$model][$size];
+                $item->allow_processing = $product["PROCESS"];
                 $item->bitrix_catalog_id = $product["ID"];
                 $item->bitrix_price_id = $product["PRICE_ID"];
             }
@@ -305,7 +314,7 @@ class bitrixImport extends commonClass {
     protected function updatePriceCount() {
         $total = 0;
         foreach($this->items as $item) {
-            if (!(empty($item->bitrix_catalog_id))) {
+            if (($item->allow_processing) && !(empty($item->bitrix_catalog_id))) {
                 $result = $item->updatePriceCount();
                 if ($result) {
                     $item->is_processed = true;
@@ -344,7 +353,7 @@ class bitrixImport extends commonClass {
 
 
     /**
-     * Выставляет активность у товаров, кол-во которых > 0
+     * Выставляет активность у товаров, кол-во которых > 0, не обрабатываем товары в неактивных категориях
      */
     public function updateActivity() {
         $this->toLog("Обновление активности ненулевых позиций");
@@ -355,10 +364,20 @@ class bitrixImport extends commonClass {
                     'reference' => array('=this.ID' => 'ref.ID'),
                 ]
             )
+            ->registerRuntimeField('SECTION', [
+                    'data_type' => '\Bitrix\Iblock\SectionTable',
+                    'reference' => ['=this.IBLOCK_SECTION_ID' => 'ref.ID'],
+                    'join_type' => "LEFT"
+                ]
+            )
             ->setSelect([
                 'ID', 'NAME', 'ACTIVE', 'PRODUCT.QUANTITY'
             ])
-            ->setFilter(['=IBLOCK_ID' => $this->iblock_ids, '>PRODUCT.QUANTITY' => 0, 'ACTIVE' => 'N'])
+            ->setFilter(['=IBLOCK_ID' => $this->iblock_ids,
+                         '>PRODUCT.QUANTITY' => 0,
+                         '=ACTIVE' => 'N',
+                         '=SECTION.ACTIVE' => 'Y'
+                        ])
             //->setOrder(['IBLOCK_ID' => 'ASC', 'IBLOCK_SECTION_ID' => 'ASC', 'NAME' => 'ASC']);
         ;
 

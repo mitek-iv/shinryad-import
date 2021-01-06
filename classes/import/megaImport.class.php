@@ -73,7 +73,8 @@ class megaImport extends commonClass {
 
 
     protected function test() {
-        //Bridgestone Blizzak DM V2
+        /*
+        //Тест поиска и добавления категории Bridgestone Blizzak DM V2
         $bitrix_catalog_sections = new bitrixCatalogSectionList(array(16, 19));
         $first_level_section =$bitrix_catalog_sections->findOrInsert(
             array(
@@ -94,10 +95,18 @@ class megaImport extends commonClass {
             )
         );
         print "2nd: " . $parent_section . "<br>";
-        /*
+        */
+
+
+        //Тест обновления активности
         $bitrixImport = new bitrixImport(4, 3000);
         $bitrixImport->updateActivity();
         //$bitrixImport->process();
+        unset($bitrixImport);
+
+        /*
+        $bitrixImport = new bitrixImport(4, 3000);
+        $bitrixImport->getProductsFromCatalog();
         unset($bitrixImport);
         */
     }

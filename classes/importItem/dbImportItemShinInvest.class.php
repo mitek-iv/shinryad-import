@@ -3,9 +3,9 @@ class dbImportItemShinInvest extends dbImportItem {
     function __construct(array $item) {
         $this->id = $item["code"];
         $this->marka = $item["producer"];
-        $this->model = $this->normalizeModel($this->marka, $item["model"]);
-        
-        //$this->img = $item->img_big_my;
+        $this->model = $item["model"];
+        $this->normalizeMarkaModel();
+
         $this->getPriceCount($item); //Обработка цены и количества
         $this->getParams($item);
         $this->convertToSize($item);
@@ -40,6 +40,7 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
     protected $min_count = 4;
     protected $price_coef = 1.1;
     
+
     protected function getParams(array $item) {
         $this->params["width"] = $this->compactVal($item["width"]);
         $this->params["height"] = $this->compactVal($item["height"]);
@@ -53,15 +54,24 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
         //$this->params["store_id"] = $item["stockName"];
     }
     
+
     protected function convertToSize() {
         $this->size = sprintf("%s/%s R%s %s%s", $this->params["width"], $this->params["height"], $this->params["radius"], $this->params["index_loading"], $this->params["index_speed"]);
+        $this->size = str_replace("  ", " ", $this->size);
     }
     
-    protected function normalizeModel($marka, $model) {
-        if ($marka == "Nokian") //Nokian H-8 => Nokian Hakkapeliitta 8
-            $model = str_replace("H-", "Hakkapeliitta ", $model);
-        
-        return parent::normalizeModel($marka, $model);
+
+    protected function normalizeMarkaModel() {
+        parent::normalizeMarkaModel();
+
+        switch($this->marka) {
+            case "BF Goodrich": //BF Goodrich => BFGoodrich
+                $this->marka = "BFGoodrich";
+                break;
+            case "Nokian": //Nokian H-8 => Nokian Hakkapeliitta 8
+                $this->model = str_replace("H-", "Hakkapeliitta ", $this->model);
+                break;
+        }
     }
 }
 
@@ -71,6 +81,7 @@ class dbImportItemShinInvestDisc extends dbImportItemShinInvest {
     protected $min_count = 4;
     protected $price_coef = 1.1;
     
+
     protected function getParams(array $item) {
         
         $this->params["width"] = str_replace(",", ".", $item["width"]);
@@ -84,6 +95,7 @@ class dbImportItemShinInvestDisc extends dbImportItemShinInvest {
         //$this->params["store_id"] = $item["stockName"];
     }
     
+
     protected function convertToSize() {
         $this->size = sprintf("%sx%s %sx%s ET%s D%s %s", 
                               $this->params["width"],
@@ -94,14 +106,8 @@ class dbImportItemShinInvestDisc extends dbImportItemShinInvest {
                               $this->params["dia"],
                               $this->params["color"]
                              );
-    }
-    
-    protected function normalizeModel($marka, $model) {
-        /*
-        if ($marka == "Nokian") //Nokian H-8 => Nokian Hakkapeliitta 8
-            $model = str_replace("H-", "Hakkapeliitta ", $model);
-        */
-        return $model;
+
+        $this->size = str_replace("  ", " ", $this->size);
     }
 }
 ?>

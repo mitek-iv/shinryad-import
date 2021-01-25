@@ -16,10 +16,10 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
     
     
     public function queryString(int $provider_id) {
-        if ($this->count <= 0) return null;
+        //if ($this->count <= 0) return null;
         if (htmlspecialchars($this->model, ENT_QUOTES) == "") return null;
             
-        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s')",
+        return sprintf("('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', %s)",
                         $provider_id,
                         $this->product_type,
                         $this->id,
@@ -32,7 +32,7 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
                         $this->count,
                         toJSON($this->params),
                         $this->flt_var($this->provider_title),
-                        $this->img
+                        (empty($this->img)) ? "null" : "'$this->img'"
                       );
     }
     

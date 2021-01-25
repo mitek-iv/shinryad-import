@@ -62,25 +62,50 @@ class dbImport extends commonClass {
         $db = new db();
         $db->query("
             INSERT INTO imp_product_compact
-            SELECT *, 0 as is_processed FROM imp_product_full WHERE id IN (
-                SELECT MAX(id) as id
-                FROM (
-                    SELECT P1.id, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`
-                    FROM imp_product_full P1
-                    INNER JOIN (
-                        SELECT `type_id`, MAX(`marka`) as `marka`, MAX(`model`) as `model`, MAX(`size`) as `size`, MIN(price) as min_price, COUNT(*) as cnt
-                        FROM `imp_product_full`
-                        WHERE 1
-                        GROUP BY `type_id`, UPPER(`marka`), UPPER(`model`), UPPER(`size`)
-                    ) P2
-                    ON (P1.`type_id` = P2.`type_id`) AND (P1.`marka` = P2.`marka`) AND (P1.`model` = P2.`model`) AND (P1.`size` = P2.`size`) AND (P1.`price` = P2.`min_price`)
-                ) P3
+            SELECT O1.id, O1.provider_id, O1.type_id, O1.code, O1.marka, O1.model, O1.size, O1.full_title, O1.provider_title, O1.price_opt, O1.price, O1.count, O1.params,
+                   O2.img, 0 as is_processed
+            FROM imp_product_full O1
+            INNER JOIN (
+                SELECT MAX(`id`) as id, MAX(`img`) as img
+                    FROM (
+                        SELECT P1.`id`, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`, P2.`img`
+                        FROM imp_product_full P1
+                        INNER JOIN (
+                            SELECT `type_id`, MAX(`marka`) as `marka`, MAX(`model`) as `model`, MAX(`size`) as `size`, MIN(`price`) as `min_price`, MAX(`img`) as `img`, COUNT(*) as `cnt`
+                            FROM `imp_product_full`
+                            WHERE 1
+                            GROUP BY `type_id`, UPPER(`marka`), UPPER(`model`), UPPER(`size`)
+                        ) P2
+                        ON (P1.`type_id` = P2.`type_id`) AND (P1.`marka` = P2.`marka`) AND (P1.`model` = P2.`model`) AND (P1.`size` = P2.`size`) AND (P1.`price` = P2.`min_price`)
+                        WHERE P1.`count` > 0
+                    ) P3
                 WHERE 1
                 GROUP BY  `type_id`, `marka`, `model`, `size`, `price`
-            )
+            ) O2
+            ON O1.id = O2.id
         ");
 
         unset($db);
+
+        //        $db->query("
+//            INSERT INTO imp_product_compact
+//            SELECT *, 0 as is_processed FROM imp_product_full WHERE id IN (
+//                SELECT MAX(id) as id
+//                FROM (
+//                    SELECT P1.id, P1.`type_id`, P1.`marka`, P1.`model`, P1.`size`, P1.`price`
+//                    FROM imp_product_full P1
+//                    INNER JOIN (
+//                        SELECT `type_id`, MAX(`marka`) as `marka`, MAX(`model`) as `model`, MAX(`size`) as `size`, MIN(price) as min_price, COUNT(*) as cnt
+//                        FROM `imp_product_full`
+//                        WHERE 1
+//                        GROUP BY `type_id`, UPPER(`marka`), UPPER(`model`), UPPER(`size`)
+//                    ) P2
+//                    ON (P1.`type_id` = P2.`type_id`) AND (P1.`marka` = P2.`marka`) AND (P1.`model` = P2.`model`) AND (P1.`size` = P2.`size`) AND (P1.`price` = P2.`min_price`)
+//                ) P3
+//                WHERE 1
+//                GROUP BY  `type_id`, `marka`, `model`, `size`, `price`
+//            )
+//        ");
     }
     
     

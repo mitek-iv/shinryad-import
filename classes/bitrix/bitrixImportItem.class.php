@@ -8,8 +8,10 @@ class bitrixImportItem extends dbImportItem {
     public $bitrix_catalog_sections; //bitrixCatalogSectionList
 
     protected $provider_id;
-    protected $prop_price_old_id;
-    protected $prop_price_min_id;
+    protected $prop_price_old_id; //Ид. свойства "Старая цена"
+    protected $prop_price_min_id; //Ид. свойства "Мин. цена"
+    protected $prop_provider_id; //Ид. свойства "Ид. склада"
+    protected $prop_delivery_id; //Ид. свойства "Срок поставки"
     protected $price_min;
     protected $price_old;
     
@@ -80,10 +82,13 @@ class bitrixImportItem extends dbImportItem {
             return false;
         }
 
-        //Апдейтим свойства Минимальная цена и Старая цена
+        //Апдейтим свойства Минимальная цена, Старая цена, Поставщик, Срок поставки
         $PROP = array();
         $PROP[$this->prop_price_old_id] = $this->price_old;
         $PROP[$this->prop_price_min_id] = $this->price_min;
+        $PROP[$this->prop_provider_id] = $this->provider_id;
+        $PROP[$this->prop_delivery_id] = $this->getDeliveryId();
+
         CIBlockElement::SetPropertyValuesEx($this->bitrix_catalog_id, false, $PROP);
 
         return true;
@@ -167,6 +172,19 @@ class bitrixImportItem extends dbImportItem {
 
         CCatalogProduct::Add($arFields);
     }
+
+
+    /**
+     * В зависимости от постащика и типа товара возвращает Ид. значения поля "Срок поставки" в битриксе
+     */
+    protected function getDeliveryId() {
+        if (isset($this->delivery_ids[$this->provider_id]))
+            $result = $this->delivery_ids[$this->provider_id];
+        else
+            $result = $this->default_delivery_id;
+
+        return $result;
+    }
 }
 
 
@@ -175,6 +193,14 @@ class bitrixImportItemTyre extends bitrixImportItem {
     protected $iblock_id = 16;
     protected $prop_price_old_id = 421;
     protected $prop_price_min_id = 447;
+    protected $prop_provider_id = 459; //Ид. свойства "Ид. склада"
+    protected $prop_delivery_id = 420; //Ид. свойства "Срок поставки"
+
+    protected $default_delivery_id = 182;
+    protected $delivery_ids = array(//142 - 1-2 дня, 143 - 2-4 дня, 144 - в наличии, 182 - 1-3 дня
+        "1" => 182,
+        "2" => 143,
+    );
 
     protected function getProperties() {
         //{"width":"235","height":"65","radius":"17","index_loading":"108","index_speed":"V","thorn":0,"season":"u"}
@@ -203,15 +229,15 @@ class bitrixImportItemTyre extends bitrixImportItem {
             117 => $this->params["height"],
             123 => $this->params["index_loading"],
             124 => $this->params["index_speed"],
-            121 => Array("VALUE" => $ship),
-            120 => Array("VALUE" => $season),
+            121 => array("VALUE" => $ship),
+            120 => array("VALUE" => $season),
             155 => "Шины легковые", //Тип автошины – Шины легковые
             422 => "Y", //Выгружать в Яндекс.Маркет
             130 => $this->model, //Модель автошины
             119 => $this->marka, //Производитель
             459 => $this->provider_id,
-            420 => Array("VALUE" => 182), //Срок доставки 1-3 дня
-            415 => Array("VALUE" => 141), //Мониторить
+            420 => $this->getDeliveryId(), //Array("VALUE" => 182), //Срок доставки 1-3 дня
+            415 => array("VALUE" => 141), //Мониторить
             $this->prop_price_old_id => $this->price_old,
             $this->prop_price_min_id => $this->price_min
         );
@@ -226,6 +252,15 @@ class bitrixImportItemDisc extends bitrixImportItem {
     protected $iblock_id = 19;
     protected $prop_price_old_id = 454;
     protected $prop_price_min_id = 444;
+    protected $prop_provider_id = 458; //Ид. свойства "Ид. склада"
+    protected $prop_delivery_id = 432; //Ид. свойства "Срок поставки"
+
+    protected $default_delivery_id = 183;
+    protected $delivery_ids = array(//152 - 1-2 дня, 153 - 1-4 дня, 154 - в наличии, 183 - 1-3 дня
+        "1" => 152,
+        "2" => 153,
+        "3" => 153,
+    );
 
     protected function getProperties() {
         //{"width":"8.5","diameter":"20","bolts_count":"10","bolts_spacing":"335","et":"163","dia":"281","color":"","type":"СТ"}
@@ -239,12 +274,12 @@ class bitrixImportItemDisc extends bitrixImportItem {
             267 => $this->params["color"],
             233 => $this->params["et"],
             458 => $this->provider_id,
-            432 => Array("VALUE" => 183), //Срок доставки 1-3 дня
+            432 => $this->getDeliveryId(), //array("VALUE" => 183), //Срок доставки 1-3 дня
             253 => $this->params["type"], //материал
             266 => $this->marka, //Производитель
             256 => $this->model, //Модель диска
             424 => "Y", //Выгружать в Яндекс.Маркет
-            423 => Array("VALUE" => 145), //Мониторит
+            423 => array("VALUE" => 145), //Мониторит
             $this->prop_price_old_id => $this->price_old,
             $this->prop_price_min_id => $this->price_min
         );

@@ -72,11 +72,14 @@ class dbImportItemKolesaDaromTyre extends dbImportItemKolesaDarom {
         parent::normalizeMarkaModel();
 
         switch($this->marka) {
+            /*
             case "BF Goodrich": //BF Goodrich => BFGoodrich
                 $this->marka = "BFGoodrich";
                 $this->model = str_replace("G Grip", "G-Grip", $this->model);
                 $this->model = str_replace("G Force", "G-Force", $this->model);
+                $this->model = str_replace("Mud Terrain", "Mud-Terrain", $this->model);
                 break;
+            */
             case "Continental": //Conti Cross Contact LX2 => ContiCrossContact LX2
                 $m_part = explode(" ", $this->model);
                 if (count($m_part) > 1) {

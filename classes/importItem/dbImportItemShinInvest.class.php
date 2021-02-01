@@ -64,14 +64,18 @@ class dbImportItemShinInvestTyre extends dbImportItemShinInvest {
     protected function normalizeMarkaModel() {
         parent::normalizeMarkaModel();
 
+        /*
         switch($this->marka) {
+
             case "BF Goodrich": //BF Goodrich => BFGoodrich
                 $this->marka = "BFGoodrich";
                 break;
+
             case "Nokian": //Nokian H-8 => Nokian Hakkapeliitta 8
                 $this->model = str_replace("H-", "Hakkapeliitta ", $this->model);
                 break;
         }
+        */
     }
 }
 

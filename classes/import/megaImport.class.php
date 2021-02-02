@@ -36,6 +36,16 @@ class megaImport extends commonClass {
             case "get_csv":
                 $this->getCSV();
                 break;
+            case "replace_show":
+                $this->showReplacementDict();
+                break;
+            case "replace_add":
+                $this->addReplacementToDict();
+                break;
+            case "replace_del":
+                $this->delReplacementToDict();
+                break;
+
         }
     }
 
@@ -135,6 +145,7 @@ class megaImport extends commonClass {
         $url_test = $this->getNextStepUrl("test");
         $url_clear = $this->getNextStepUrl("clear");
         $url_get_csv = $this->getNextStepUrl("get_csv");
+        $url_show_replace = $this->getNextStepUrl("replace_show");
 
         $result = "
             <h3>НОВЫЙ импорт</h3>
@@ -155,6 +166,7 @@ class megaImport extends commonClass {
             <a href='$url_export' class='button'>Выгрузить прайс в каталог сайта</a>
             <a href='$url_test' class='button'>Test</a>
             <a href='$url_get_csv' class='button'>CSV</a>
+            <a href='$url_show_replace' class='button'>Справочник замен</a>
             <!--<a href='$url_clear' class='button'>Clear</a>-->";
 
         print $result;
@@ -299,6 +311,87 @@ class megaImport extends commonClass {
         $this->toLog("location: $url");
         header("location: $url");
         exit;
+    }
+
+
+    protected function showReplacementDict() {
+        global $conf;
+
+        $db = new db();
+
+        $ar = $db->query("SELECT * FROM imp_replace WHERE 1 ORDER BY marka, model_find");
+
+        $result = "";
+        if (!empty($ar)) {
+            $back_url = $_SERVER["PHP_SELF"];
+            $result = "
+                <a href='$back_url'><-Назад</a><br><br>
+                <table cellpadding='5' cellspacing='0' border='1'>
+                    <tr>
+                        <th>Марка</th>
+                        <th>Найти</th>
+                        <th>Заменить&nbsp;на</th>
+                        <th>&nbsp;</th>
+                    </tr>
+            ";
+            foreach ($ar as $item) {
+                $link_del = $this->getNextStepUrl("replace_del") . "&id=" . $item["id"];
+                $result .= "
+                    <tr>
+                        <td>$item[marka]</td>
+                        <td>$item[model_find]</td>
+                        <td>$item[model_replace]</td>
+                        <td><a href='$link_del'>Уд.</a></td>
+                    </tr>
+                ";
+            }
+
+            $result .= "</table>";
+        }
+
+        $url_add_replace = $this->getNextStepUrl("replace_add");
+        $result .= "
+            <h3>Добавление новой записи</h3>
+            <form action='$url_add_replace' method='post'>
+                <input type='text' value='' placeholder='Марка' name='edt_marka'><br>
+                <input type='text' value='' placeholder='Модель найти' name='edt_model_find'><br>
+                <input type='text' value='' placeholder='Модель заменить' name='edt_model_replace'><br>
+                <input type='submit' value='Добавить'>
+            </form>
+        ";
+        print $result;
+    }
+
+
+    protected function addReplacementToDict() {
+        global $conf;
+
+        $marka = trim(filter_var($_POST["edt_marka"], FILTER_SANITIZE_MAGIC_QUOTES));
+        $model_find = trim(filter_var($_POST["edt_model_find"], FILTER_SANITIZE_MAGIC_QUOTES));
+        $model_replace = trim(filter_var($_POST["edt_model_replace"], FILTER_SANITIZE_MAGIC_QUOTES));
+
+        if ((!empty($marka)) && (!empty($model_find)) && (!empty($model_replace))) {
+            $db = new db();
+            $db->query(sprintf("INSERT INTO imp_replace (marka, model_find, model_replace) VALUES ('%s', '%s', '%s')", $marka, $model_find, $model_replace));
+            unset($db);
+        }
+
+        $url_show_replace = $this->getNextStepUrl("replace_show");
+        $this->goURL($url_show_replace);
+    }
+
+
+    protected function delReplacementToDict() {
+        global $conf;
+
+        if (isset($_GET["id"])) {
+            $db = new db();
+            $db->query(sprintf("DELETE FROM imp_replace WHERE `id` = '%d'", $_GET["id"]));
+            unset($db);
+        }
+
+        $url_show_replace = $this->getNextStepUrl("replace_show");
+        $this->goURL($url_show_replace);
     }
 }
 ?>

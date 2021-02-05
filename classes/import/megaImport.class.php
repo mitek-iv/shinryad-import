@@ -324,7 +324,35 @@ class megaImport extends commonClass {
         $result = "";
         if (!empty($ar)) {
             $back_url = $_SERVER["PHP_SELF"];
+            $link_del = $this->getNextStepUrl("replace_del");
             $result = "
+                <script>
+                    function editReplacement(id) {
+                        let tr = document.getElementById('tr_' + id);
+                        let marka = tr.children[0].innerHTML;
+                        let model_find = tr.children[1].innerHTML;
+                        let model_replace = tr.children[2].innerHTML;
+                        
+                        let form = document.getElementById('replacementForm');
+                        let edt_id = form.elements.edt_id;
+                        let edt_marka = form.elements.edt_marka;
+                        let edt_model_find = form.elements.edt_model_find;
+                        let edt_model_replace = form.elements.edt_model_replace;
+                        
+                        edt_id.value = id;
+                        edt_marka.value = marka;
+                        edt_model_find.value = model_find;
+                        edt_model_replace.value = model_replace;
+                    }
+                    
+                    
+                    function deleteReplacement(id) {
+                        if (confirm('Действительно удалить?')) {
+                            location = '$link_del' + '&id=' + id;    
+                        }    
+                    }
+                </script>
+                
                 <a href='$back_url'><-Назад</a><br><br>
                 <table cellpadding='5' cellspacing='0' border='1'>
                     <tr>
@@ -332,16 +360,17 @@ class megaImport extends commonClass {
                         <th>Найти</th>
                         <th>Заменить&nbsp;на</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
             ";
             foreach ($ar as $item) {
-                $link_del = $this->getNextStepUrl("replace_del") . "&id=" . $item["id"];
                 $result .= "
-                    <tr>
+                    <tr id='tr_$item[id]'>
                         <td>$item[marka]</td>
                         <td>$item[model_find]</td>
                         <td>$item[model_replace]</td>
-                        <td><a href='$link_del'>Уд.</a></td>
+                        <td><a href='javascript:editReplacement($item[id])'>Ред.</a></td>
+                        <td><a href='javascript:deleteReplacement($item[id])'>Уд.</a></td>
                     </tr>
                 ";
             }
@@ -351,12 +380,13 @@ class megaImport extends commonClass {
 
         $url_add_replace = $this->getNextStepUrl("replace_add");
         $result .= "
-            <h3>Добавление новой записи</h3>
-            <form action='$url_add_replace' method='post'>
+            <h3>Добавление/изменение записи</h3>
+            <form id='replacementForm' action='$url_add_replace' method='post'>
+                <input type='hidden' value='0' name='edt_id'>
                 <input type='text' value='' placeholder='Марка' name='edt_marka'><br>
                 <input type='text' value='' placeholder='Модель найти' name='edt_model_find'><br>
                 <input type='text' value='' placeholder='Модель заменить' name='edt_model_replace'><br>
-                <input type='submit' value='Добавить'>
+                <input type='submit' value='Отправить'>
             </form>
         ";
         print $result;
@@ -365,14 +395,20 @@ class megaImport extends commonClass {
 
     protected function addReplacementToDict() {
         global $conf;
-
+        $id = (int) $_POST["edt_id"];
         $marka = trim(filter_var($_POST["edt_marka"], FILTER_SANITIZE_MAGIC_QUOTES));
         $model_find = trim(filter_var($_POST["edt_model_find"], FILTER_SANITIZE_MAGIC_QUOTES));
         $model_replace = trim(filter_var($_POST["edt_model_replace"], FILTER_SANITIZE_MAGIC_QUOTES));
 
         if ((!empty($marka)) && (!empty($model_find)) && (!empty($model_replace))) {
             $db = new db();
-            $db->query(sprintf("INSERT INTO imp_replace (marka, model_find, model_replace) VALUES ('%s', '%s', '%s')", $marka, $model_find, $model_replace));
+            if ($id > 0)
+                $query = sprintf("UPDATE imp_replace SET marka = '%s', model_find = '%s', model_replace = '%s' WHERE id = '%d'", $marka, $model_find, $model_replace, $id);
+            else
+                $query = sprintf("INSERT INTO imp_replace (marka, model_find, model_replace) VALUES ('%s', '%s', '%s')", $marka, $model_find, $model_replace);
+
+            $db->query($query);
+            $this->toLog($query);
             unset($db);
         }
 

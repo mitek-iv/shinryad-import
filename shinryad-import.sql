@@ -187,6 +187,53 @@ ALTER TABLE `imp_product_full`
   ADD CONSTRAINT `imp_product_full_ibfk_2` FOREIGN KEY (`type_id`) REFERENCES `imp_product_type` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
+
+--
+-- Структура таблицы `imp_replace`
+--
+
+CREATE TABLE `imp_replace` (
+                               `id` int(11) NOT NULL,
+                               `marka` varchar(255) NOT NULL,
+                               `model_find` varchar(255) NOT NULL,
+                               `model_replace` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Дамп данных таблицы `imp_replace`
+--
+
+INSERT INTO `imp_replace` (`id`, `marka`, `model_find`, `model_replace`) VALUES
+(1, 'BFGoodrich', 'G Grip', 'G-Grip'),
+(2, 'BFGoodrich', 'G Force', 'G-Force'),
+(3, 'BFGoodrich', 'Mud Terrain', 'Mud-Terrain'),
+(4, 'Nokian', 'H-8', 'Nokian Hakkapeliitta 8'),
+(5, 'Bridgestone', 'Blizzak Revo-GZ', 'Blizzak Revo GZ'),
+(6, 'Bridgestone', 'Blizzak Spike 02', 'Blizzak Spike-02'),
+(7, 'Bridgestone', 'Blizzak Spike 02 SUV', 'Blizzak Spike-02 SUV'),
+(8, 'Bridgestone', 'Ic7000 S', 'Ice Cruiser 7000S'),
+(9, 'Continental', '4x4 Contact', 'Conti4x4Contact '),
+(10, 'Continental', 'ContiEcoContact 6', 'EcoContact 6 '),
+(12, 'Bridgestone', 'Turanza ER-33', 'Turanza ER33');
+
+--
+-- Индексы таблицы `imp_replace`
+--
+ALTER TABLE `imp_replace`
+    ADD PRIMARY KEY (`id`),
+  ADD KEY `model_find` (`model_find`);
+
+--
+-- AUTO_INCREMENT для сохранённых таблиц
+--
+
+--
+-- AUTO_INCREMENT для таблицы `imp_replace`
+--
+ALTER TABLE `imp_replace`
+    MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+COMMIT;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

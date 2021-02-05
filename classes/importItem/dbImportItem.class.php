@@ -99,11 +99,12 @@ class dbImportItem extends commonClass { //Элемент (товар), полу
             FROM imp_replace
             WHERE (TRIM(UPPER(marka)) = TRIM(UPPER('%s'))) AND
                   (TRIM(UPPER(model_find)) = TRIM(UPPER('%s')))
+            LIMIT 0, 1
             ", $this->flt_var($this->marka), $this->flt_var($this->model)
         ));
 
         if (!is_null($model_replace)) {
-           // $this->toLog(sprintf("Заменил %s %s на %s %s", $this->marka, $this->model, $this->marka, $model_replace));
+            $this->toLog(sprintf("Заменил %s %s на %s %s", $this->marka, $this->model, $this->marka, $model_replace));
             $this->model = $model_replace;
         }
     }
